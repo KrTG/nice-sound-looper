@@ -1,5 +1,55 @@
 <Screen>:
+    track1: track1
+    track2: track2
+    track3: track3
+    track4: track4
     BoxLayout:
+        orientation: 'vertical'
+        BoxLayout:
+            orientation: 'vertical'
+            Track:
+                id: track1
+                screen: root
+                number: 1
+            Track:
+                id: track2
+                screen: root
+                number: 2
+            Track:
+                id: track3
+                screen: root
+                number: 3
+            Track:
+                id: track4
+                screen: root
+                number: 4
+<Track>:
+    box: box
+    BoxLayout:
+        orientation: 'horizontal'
+        Label:
+            size_hint_x: None
+            text: str(root.number)
         Button:
-            text: 'Start'
-            on_release: root.start_listening()
+            size_hint_x: None
+            text: root.record_button_text
+            background_color: root.record_button_color
+            on_release: root.on_press_record()
+        Button:
+            size_hint_x: None
+            background_color: root.play_button_color
+            text: root.play_button_text
+            on_release: root.on_press_play()
+        RelativeLayout:
+            id: box
+            size_hint_x:6
+            Image:
+                size_hint: (root.scale, 1)
+                texture: root.texture
+                keep_ratio: False
+                allow_stretch: True
+            BoxLayout:
+        Button:
+            size_hint_x: None
+            text: "Cut"
+            on_release: root.on_press_cut()
