@@ -237,6 +237,13 @@ class Screen(FloatLayout):
         for track in self.tracks.values():
             track.set_scale(max_len)
 
+    def add_track(self, number, track, spectrogram):
+        self.tracks[number].on_recorder_stop(spectrogram, track)
+        self.player.add_track(number, track)
+        self.player.play(number)
+        self.tracks[number].on_playing_start()
+        self.rescale_tracks()
+
     def on_recorder_stop(self):
         if self.sampling_noise:
             track = self.recorder.raw()
@@ -246,11 +253,7 @@ class Screen(FloatLayout):
             #self.recorder.playback()
         else:
             track, spectrogram = self.recorder.postprocess(self.get_noise_threshold())
-            self.tracks[self.current_track].on_recorder_stop(spectrogram, track)
-            self.player.add_track(self.current_track, track)
-            self.player.play(self.current_track)
-            self.tracks[self.current_track].on_playing_start()
-            self.rescale_tracks()
+            self.add_track(self.current_track, track, spectrogram)
 
     def dismiss_popup(self):
         self._popup.dismiss(animation=False)
@@ -263,25 +266,56 @@ class Screen(FloatLayout):
         )
         self._popup.open()
 
+    def show_load(self):
+        content = LoadDialog(load=self.load, cancel=self.dismiss_popup)
+        self._popup = Popup(
+            title="Load file", content=content, size_hint=(0.9, 0.8), pos_hint={'y': 0.2},
+            auto_dismiss=False
+        )
+        self._popup.open()
+
     def save(self, path, filename):
         self.dismiss_popup()
         if not filename:
             return
 
+        if not path.endswith(".looper"):
+            path += ".looper"
         with zipfile.ZipFile(os.path.join(path, "{}.looper".format(filename)), "w") as zippy:
             if self.recorder.noise_sample is not None:
                 name = "sv_noise"
                 with open(name, "wb") as savefile:
                     np.save(savefile, self.recorder.noise_sample, allow_pickle=False, fix_imports=False)
                     zippy.write(name)
-                    os.remove(name)
+                os.remove(name)
 
             for number, track in self.player.tracks.items():
                 name = "sv_{}".format(number)
                 with open(name, "wb") as savefile:
                     np.save(savefile, track.track, allow_pickle=False, fix_imports=False)
                     zippy.write(name)
-                    os.remove(name)
+                os.remove(name)
+
+    def load(self, path, filename):
+        self.dismiss_popup()
+        if not filename:
+            return
+
+        with zipfile.ZipFile(filename[0], "r") as zippy:
+            tracks = zippy.namelist()
+            if "sv_noise" in tracks:
+                with zippy.open("sv_noise", "r") as noise_file:
+                    noise_sample = np.load(noise_file)
+                    self.recorder.noise_sample = noise_sample
+                tracks.remove("sv_noise")
+
+            for track_save in tracks:
+                with zippy.open(track_save, "r") as track_file:
+                    track = np.load(track_file)
+                    number = int(track_save.split("_")[1])
+                    self.add_track(number, track, np.zeros((128, 500)))
+
+
 
     def handle_keyboard(self, keyboard, keycode, text, modifiers):
         pass

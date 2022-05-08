@@ -35,6 +35,10 @@
                 on_release: root.show_save()
             Button:
                 size_hint_x: 3
+                text: "Load Project"
+                on_release: root.show_load()
+            Button:
+                size_hint_x: 3
                 text: "Reset"
                 on_release: root.reset()
             BoxLayout:
@@ -126,29 +130,22 @@
         orientation: "vertical"
         FileChooserListView:
             id: filechooser
-            on_selection: text_input.text = self.selection and self.selection[0] or ''
             path: "."
+            on_selection: text_input.text = self.selection and self.selection[0] or ''
 
         BoxLayout:
             orientation: 'horizontal'
-
+            size_hint_y: None
+            height: 30
             Label:
                 size_hint_x: 2
-                size_hint_y: None
-                height: 30
                 text: "Save file: "
-
             TextInput:
                 id: text_input
                 size_hint_x: 10
-                size_hint_y: None
-                height: 30
                 multiline: False
-
             Label:
                 size_hint_x: 2
-                size_hint_y: None
-                height: 30
                 text: ".looper"
 
         BoxLayout:
