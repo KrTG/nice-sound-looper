@@ -1,4 +1,6 @@
 import enum
+import traceback
+
 import librosa
 import librosa.display
 import noisereduce
@@ -26,8 +28,8 @@ class State(enum.Enum):
     STOPPED = 0
     WAITING = 1
     RECORDING = 2
-    PLAYING = 3
-
+    RECORDING_INTERVAL = 3
+    PLAYING = 4
 
 class Recorder():
     def __init__(self, start_callback=lambda: None, stop_callback=lambda: None):
@@ -41,12 +43,16 @@ class Recorder():
 
         self.start_time = 0
         self.reference_frame = None
-        self.time_sig = None
+
+        self.time_left = None
+
+        self.noise_sample = None
 
     def _reset(self):
         self.volumes = np.zeros(80, dtype=np.float32)
         self.buffer = np.zeros([SR * 60, CHANNELS], dtype=np.float32)
         self.rec_index = 0
+        self.time_left = None
 
     @property
     def state(self):
@@ -57,16 +63,20 @@ class Recorder():
         self._state = value
         print ("State changed to: {}".format(value))
 
-    def wait(self, start_time, reference_frame=None, time_sig=4):
-        print(self.stream.active)
+    def wait(self, start_time, reference_frame=None):
         if self.state != State.STOPPED:
             raise RecorderException("Cannot record in state: {}".format(self.state))
+        self._reset()
         self.start_time = start_time
         self.reference_frame = reference_frame
-        self.time_sig = time_sig
         self.state = State.WAITING
+        if self.stream.stopped:
+            self.stream.start()
+
+    def record(self, length):
         self._reset()
-        print("STARTING STREAM")
+        self.time_left = length
+        self.state = State.RECORDING_INTERVAL
         if self.stream.stopped:
             self.stream.start()
 
@@ -80,20 +90,20 @@ class Recorder():
         self.state = State.PLAYING
         sd.play(np.tile(self.buffer[:self.rec_index], (4, 1)))
 
-    def postprocess(self):
+    def raw(self):
+        if self.state != State.STOPPED:
+            raise RecorderException()("Cannot get recording in state: {}".format(self.state))
+        track = self.buffer[:self.rec_index]
+        return track
+
+    def postprocess(self, noise_threshold):
         if self.state != State.STOPPED:
             raise RecorderException()("Cannot postprocess in state: {}".format(self.state))
         # pad recorder sound up to spectrogram hop_length
         if self.rec_index % HOP_LENGTH != 0:
             self.rec_index += (HOP_LENGTH - self.rec_index % HOP_LENGTH)
-        track = noisereduce.reduce_noise(
-            self.buffer[:self.rec_index].flatten(),
-            sr=SR,
-            stationary=True,
-            n_std_thresh_stationary=1
-        )
-        track = np.expand_dims(track, 1)
-        #track, spect = self._even_out(self.buffer[:self.rec_index])
+
+        track = self._noise_reduce(self.buffer[:self.rec_index], noise_threshold)
         track, spect = self._even_out(track)
         if self.reference_frame:
             track, spect = self._quantize(track, spect)
@@ -102,6 +112,18 @@ class Recorder():
             return track, spect
 
         return track, spect
+
+    def _noise_reduce(self, track, noise_threshold):
+        track = noisereduce.reduce_noise(
+            track.flatten(),
+            sr=SR,
+            stationary=True,
+            n_std_thresh_stationary=noise_threshold,
+            y_noise=self.noise_sample
+        )
+        track = np.expand_dims(track, 1)
+
+        return track
 
     def _even_out(self, track):
         spect = librosa.feature.melspectrogram(y=track.flatten(), sr=SR, n_mels=128, fmax=10000, hop_length=HOP_LENGTH)
@@ -134,14 +156,20 @@ class Recorder():
     def _quantize(self, track, spect):
         quant = self.reference_frame
         if track.shape[0] > self.reference_frame:
-            while track.shape[0] > quant:
+            while track.shape[0] > quant * 1.5:
                 quant += self.reference_frame
         else:
-            while track.shape[0] <= quant // 2:
+            while track.shape[0] <= 1.5 * (quant // 2):
                 quant //= 2
         padding = quant - track.shape[0]
-        track = np.pad(track, ((0, padding), (0, 0)))
-        spect = np.pad(spect, ((0, 0), (0, int(padding * spect.shape[1] / track.shape[0]))))
+        spect_padding = int((padding / track.shape[0]) * spect.shape[1])
+        if (padding >= 0):
+            track = np.pad(track, ((0, padding), (0, 0)))
+            spect = np.pad(spect, ((0, 0), (0, spect_padding)))
+        else:
+            track = track[:padding]
+            spect = spect[:, :spect_padding]
+
 
         assert(track.shape[0] == quant)
 
@@ -151,11 +179,8 @@ class Recorder():
     def _adjust_to_start_time(self, track, spect):
         adjustment = self.start_time % track.shape[0]
         spect_adjustment = int(adjustment * spect.shape[1] / track.shape[0])
-        print(spect_adjustment)
-        print(spect.shape[1])
         track = np.concatenate((track[-adjustment:], track[:-adjustment]))
         spect = np.concatenate((spect[:, -spect_adjustment:], spect[:, :-spect_adjustment]), axis=1)
-        print(spect)
         return track, spect
 
 
@@ -175,10 +200,20 @@ class Recorder():
             self.volumes = np.roll(self.volumes, 1)
             self.volumes[0] = volume_current
             if self.state == State.RECORDING:
-                if (volume_80_max < self.silence_threshold and volume_current < self.silence_threshold) or self.rec_index + frames > len(self.buffer):
+                if (
+                    (volume_80_max < self.silence_threshold and volume_current < self.silence_threshold)
+                    or (self.rec_index + frames > len(self.buffer))
+                ):
                     self.stop()
                 else:
                     self.buffer[self.rec_index:self.rec_index+frames] = indata
                     self.rec_index += frames
+            elif self.state == State.RECORDING_INTERVAL:
+                if self.time_left is not None and self.time_left <= 0:
+                    self.stop()
+                else:
+                    self.buffer[self.rec_index:self.rec_index+frames] = indata
+                    self.rec_index += frames
+                    self.time_left -= frames
         except Exception as e:
-            print (e)
+            print (traceback.format_exception(e))

@@ -39,21 +39,21 @@ class Player():
         self.play_index = 0
         self._next_chunk_size = 0
 
-    @property
-    def reference_progress(self):
-        if len(self.tracks) == 0:
+    def get_reference_progress(self, exclude):
+        tracks = [t for k, t in self.tracks.items() if k != exclude]
+        if len(tracks) == 0:
             return 0
         else:
-            print(max(t.progress - t.frames for t in self.tracks.values()) / SR)
-            print(max(t.progress - t.len - t.frames for t in self.tracks.values()) / SR)
-            return max(t.progress - t.frames for t in self.tracks.values())
+            print(max(t.progress - t.frames for t in tracks) / SR)
+            print(max(t.progress - t.len - t.frames for t in tracks) / SR)
+            return max(t.progress - t.frames for t in tracks)
 
-    @property
-    def reference_frame(self):
-        if len(self.tracks) == 0:
+    def get_reference_frame(self, exclude):
+        tracks = [t for k, t in self.tracks.items() if k != exclude]
+        if len(tracks) == 0:
             return None
         else:
-            return min(t.len for t in self.tracks.values())
+            return min(t.len for t in tracks)
 
     @property
     def length(self):
@@ -67,6 +67,9 @@ class Player():
 
     def start(self):
         self.stream.start()
+
+    def stop(self):
+        self.stream.stop()
 
     def play(self, n):
         try:
