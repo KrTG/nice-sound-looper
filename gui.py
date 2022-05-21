@@ -334,7 +334,7 @@ class Screen(FloatLayout):
 
                 playing_name = name + ".playing"
                 with open(playing_name, "wb") as savefile:
-                    savefile.write(bytes(track.playing))
+                    savefile.write(track.playing.to_bytes(1, "big"))
                 zippy.write(playing_name)
                 os.remove(playing_name)
 
@@ -363,7 +363,7 @@ class Screen(FloatLayout):
             for track_playing in tracks[:]:
                 with zippy.open(track_playing, "r") as track_file:
                     content = track_file.read()
-                    playing = bool(content)
+                    playing = bool.from_bytes(content, "big")
                     number = int(track_playing.split(".")[0].split("_")[1])
                     if playing:
                         self.start_playing(number)
