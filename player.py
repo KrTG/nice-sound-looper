@@ -140,7 +140,7 @@ class Player():
         return output
 
     def callback(self, outdata, frames, time, status):
-        cgithunks = []
+        chunks = []
         volumes = self.volume_callback()
         for n, track in self.tracks.items():
             if track.playing:
