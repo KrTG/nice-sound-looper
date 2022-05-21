@@ -20,6 +20,7 @@ class Track():
         self.len = track.shape[0]
         self.track = np.tile(track, (2, 1))
         self.playing = False
+        self.volume = 1
         self.progress = 0
         self.frames = 0
 
@@ -33,12 +34,11 @@ class Track():
         return spect
 
 class Player():
-    def __init__(self, volume_callback):
+    def __init__(self):
         self.tracks = {}
         self.stream = sd.OutputStream(callback=self.callback)
         self.play_index = 0
         self._next_chunk_size = 0
-        self.volume_callback = volume_callback
 
     def get_reference_progress(self, exclude=None):
         tracks = [t for k, t in self.tracks.items() if k != exclude and t.playing]
@@ -122,14 +122,13 @@ class Player():
         frames = 5000
         output = None
         progress = 0
-        volumes = self.volume_callback()
         while progress < length * SR:
             chunks = []
-            for n, track in self.tracks.items():
+            for track in self.tracks.values():
                 a = progress % track.len
                 b = a + frames
                 chunk = track.track[a:b]
-                chunk = volumes[n] * chunk
+                chunk = track.volume * chunk
                 chunks.append(track.track[a:b])
                 _sum = sum(chunks)
             if output is None:
@@ -141,13 +140,12 @@ class Player():
 
     def callback(self, outdata, frames, time, status):
         chunks = []
-        volumes = self.volume_callback()
-        for n, track in self.tracks.items():
+        for track in self.tracks.values():
             if track.playing:
                 a = self.play_index % track.len
                 b = a + frames
                 chunk = track.track[a:b]
-                chunk = volumes[n] * chunk
+                chunk = track.volume * chunk
                 chunks.append(chunk)
                 track.progress = a
                 track.frames = frames

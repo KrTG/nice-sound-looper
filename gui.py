@@ -88,6 +88,7 @@ class Track(BoxLayout):
         self.record_button_color = WHITE
         self.play_button_text = "Play"
         self.play_button_color = WHITE
+        Clock.schedule_interval(self.update_volume, 0.02)
 
     def on_press_record(self):
         try:
@@ -154,6 +155,12 @@ class Track(BoxLayout):
     def update_image(self, _):
         self.texture = to_texture(self.new_texture)
 
+    def update_volume(self, _):
+        try:
+            self.screen.player.tracks[self.number].volume = self.volume.get()
+        except KeyError:
+            pass
+
 
 class Screen(FloatLayout):
     track1 = ObjectProperty(None)
@@ -175,11 +182,9 @@ class Screen(FloatLayout):
             start_callback=self.on_recorder_start,
             stop_callback=self.on_recorder_stop
         )
-        self.player = player.Player(volume_callback=self.get_volumes)
+        self.player = player.Player()
         self.player.start()
         Clock.schedule_interval(self.update_progress, 0.02)
-
-        self.get_volumes()
 
     @property
     def tracks_x(self):
@@ -265,9 +270,6 @@ class Screen(FloatLayout):
         self.player.play(number)
         self.tracks[number].on_playing_start()
         self.rescale_tracks()
-
-    def get_volumes(self):
-        return {n: track.volume.get() for n, track in self.tracks.items()}
 
     def on_recorder_stop(self):
         if self.sampling_noise:
