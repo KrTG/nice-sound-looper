@@ -181,6 +181,14 @@ class Screen(FloatLayout):
 
         self.get_volumes()
 
+    @property
+    def tracks_x(self):
+        return 0 if self.track1 is None else self.track1.box.x
+
+    @property
+    def tracks_width(self):
+        return 0 if self.track1 is None else self.track1.box.width
+
     def get_latency_adjustment(self):
         try:
             return int(self.latency_adjustment.text)
@@ -357,6 +365,9 @@ class Screen(FloatLayout):
         if reference is None:
             reference = 1
         self.progress_bar = self.player.get_max_progress() / reference
+
+    def info(self):
+        self.player.info()
 
 
 class LooperApp(App):

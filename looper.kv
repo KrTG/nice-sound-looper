@@ -12,7 +12,7 @@
                 Color:
                     rgba: (1, 0, 0, 1)
                 Line:
-                    points: (300 + int(root.progress_bar * (self.width - 500)) , self.pos[1], 300 + int(root.progress_bar * (self.width - 500)), self.pos[1] + self.height)
+                    points: (root.tracks_x + int(root.progress_bar * root.tracks_width), self.pos[1], root.tracks_x + int(root.progress_bar * root.tracks_width), self.pos[1] + self.height)
             size_hint_y: 8
             orientation: 'vertical'
             Track:
@@ -46,6 +46,10 @@
                 size_hint_x: 3
                 text: "Export"
                 on_release: root.show_export()
+            Button:
+                size_hint_x: 3
+                text: "Info"
+                on_release: root.info()
             Button:
                 size_hint_x: 3
                 text: "Reset"

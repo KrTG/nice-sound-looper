@@ -108,15 +108,28 @@ class Player():
         except KeyError:
             raise PlayerException("Cannot cut empty track.")
 
+    def info(self):
+        if not self.tracks:
+            return
+        length = max(t.len for t in self.tracks.values()) // SR
+        print(length)
+        output = self.export(length)
+        print (max(output))
+        print (min(output))
+        print (np.average(output))
+
     def export(self, length=30):
         frames = 5000
         output = None
         progress = 0
+        volumes = self.volume_callback()
         while progress < length * SR:
             chunks = []
-            for track in self.tracks.values():
+            for n, track in self.tracks.items():
                 a = progress % track.len
                 b = a + frames
+                chunk = track.track[a:b]
+                chunk = volumes[n] * chunk
                 chunks.append(track.track[a:b])
                 _sum = sum(chunks)
             if output is None:
@@ -126,16 +139,15 @@ class Player():
             progress += frames
         return output
 
-
     def callback(self, outdata, frames, time, status):
-        chunks = []
+        cgithunks = []
         volumes = self.volume_callback()
         for n, track in self.tracks.items():
             if track.playing:
                 a = self.play_index % track.len
                 b = a + frames
                 chunk = track.track[a:b]
-                chunk *= volumes[n]
+                chunk = volumes[n] * chunk
                 chunks.append(chunk)
                 track.progress = a
                 track.frames = frames
