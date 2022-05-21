@@ -51,6 +51,9 @@ class VolumeSlider(BoxLayout):
     def get(self):
         return 2 * self.slider.value / 100
 
+    def set(self, value):
+        self.slider.value = int(value * 100 / 2)
+
 class LoadDialog(FloatLayout):
     load = ObjectProperty(None)
     cancel = ObjectProperty(None)
@@ -325,7 +328,6 @@ class Screen(FloatLayout):
                 os.remove(name)
 
             for number, track in self.player.tracks.items():
-
                 name = "sv_{}".format(number)
                 with open(name, "wb") as savefile:
                     np.save(savefile, track.track[:track.len], allow_pickle=False, fix_imports=False)
@@ -337,6 +339,12 @@ class Screen(FloatLayout):
                     savefile.write(track.playing.to_bytes(1, "big"))
                 zippy.write(playing_name)
                 os.remove(playing_name)
+
+                volume_name = name + ".volume"
+                with open(volume_name, "wb") as savefile:
+                    savefile.write(int(track.volume * 100).to_bytes(8, "big"))
+                zippy.write(volume_name)
+                os.remove(volume_name)
 
     def load(self, path, filename):
         self.dismiss_popup()
@@ -354,6 +362,8 @@ class Screen(FloatLayout):
             for track_save in tracks[:]:
                 if track_save.endswith(".playing"):
                     continue
+                if track_save.endswith(".volume"):
+                    continue
                 with zippy.open(track_save, "r") as track_file:
                     track = np.load(track_file)
                     number = int(track_save.split("_")[1])
@@ -361,6 +371,8 @@ class Screen(FloatLayout):
                     tracks.remove(track_save)
 
             for track_playing in tracks[:]:
+                if not track_playing.endswith(".playing"):
+                    continue
                 with zippy.open(track_playing, "r") as track_file:
                     content = track_file.read()
                     playing = bool.from_bytes(content, "big")
@@ -372,6 +384,16 @@ class Screen(FloatLayout):
                         self.stop_playing(number)
                         self.tracks[number].on_playing_stop()
                     tracks.remove(track_playing)
+
+            for track_volume in tracks[:]:
+                if not track_playing.endswith(".volume"):
+                    continue
+                with zippy.open(track_volume, "r") as track_file:
+                    content = track_file.read()
+                    volume = int.from_bytes(content, "big") / 100
+                    number = int(track_volume.split(".")[0].split("_")[1])
+                    self.tracks[number].volume.set(volume)
+                    tracks.remove(track_volume)
 
     def export(self, path, filename):
         self.dismiss_popup()
