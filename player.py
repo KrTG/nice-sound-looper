@@ -33,22 +33,39 @@ class Track():
         return spect
 
 class Player():
-    def __init__(self):
+    def __init__(self, volume_callback):
         self.tracks = {}
         self.stream = sd.OutputStream(callback=self.callback)
         self.play_index = 0
         self._next_chunk_size = 0
+        self.volume_callback = volume_callback
 
-    def get_reference_progress(self, exclude):
-        tracks = [t for k, t in self.tracks.items() if k != exclude]
+    def get_reference_progress(self, exclude=None):
+        tracks = [t for k, t in self.tracks.items() if k != exclude and t.playing]
         if len(tracks) == 0:
             return 0
         else:
-            print(max(t.progress - t.frames for t in tracks) / SR)
-            print(max(t.progress - t.len - t.frames for t in tracks) / SR)
             return max(t.progress - t.frames for t in tracks)
 
-    def get_reference_frame(self, exclude):
+    def get_max_progress(self, exclude=None):
+        tracks = [t for k, t in self.tracks.items() if k != exclude and t.playing]
+        progress = 0
+        _len = 0
+        for t in tracks:
+            if t.len > _len:
+                _len = t.len
+                progress = t.progress
+
+        return progress
+
+    def get_max_frame(self, exclude=None):
+        tracks = [t for k, t in self.tracks.items() if k != exclude]
+        if len(tracks) == 0:
+            return None
+        else:
+            return max(t.len for t in tracks)
+
+    def get_reference_frame(self, exclude=None):
         tracks = [t for k, t in self.tracks.items() if k != exclude]
         if len(tracks) == 0:
             return None
@@ -91,13 +108,35 @@ class Player():
         except KeyError:
             raise PlayerException("Cannot cut empty track.")
 
+    def export(self, length=30):
+        frames = 5000
+        output = None
+        progress = 0
+        while progress < length * SR:
+            chunks = []
+            for track in self.tracks.values():
+                a = progress % track.len
+                b = a + frames
+                chunks.append(track.track[a:b])
+                _sum = sum(chunks)
+            if output is None:
+                output = _sum
+            else:
+                output = np.concatenate((output, _sum))
+            progress += frames
+        return output
+
+
     def callback(self, outdata, frames, time, status):
         chunks = []
-        for track in self.tracks.values():
+        volumes = self.volume_callback()
+        for n, track in self.tracks.items():
             if track.playing:
                 a = self.play_index % track.len
                 b = a + frames
-                chunks.append(track.track[a:b])
+                chunk = track.track[a:b]
+                chunk *= volumes[n]
+                chunks.append(chunk)
                 track.progress = a
                 track.frames = frames
         if chunks:

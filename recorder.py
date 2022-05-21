@@ -113,6 +113,9 @@ class Recorder():
 
         return track, spect
 
+    def get_spectrogram(self, track):
+        return librosa.feature.melspectrogram(y=track.flatten(), sr=SR, n_mels=128, fmax=10000, hop_length=HOP_LENGTH)
+
     def _noise_reduce(self, track, noise_threshold):
         track = noisereduce.reduce_noise(
             track.flatten(),
@@ -126,8 +129,7 @@ class Recorder():
         return track
 
     def _even_out(self, track):
-        spect = librosa.feature.melspectrogram(y=track.flatten(), sr=SR, n_mels=128, fmax=10000, hop_length=HOP_LENGTH)
-        #spect = librosa.decompose.nn_filter(spect, aggregate=np.median)
+        spect = self.get_spectrogram(track)
         values = []
         _range = np.array(range(40 if spect.shape[1] % 2 == 0 else 41, min(400, spect.shape[1] - 40), 2))
         for i in _range:
@@ -156,7 +158,7 @@ class Recorder():
     def _quantize(self, track, spect):
         quant = self.reference_frame
         if track.shape[0] > self.reference_frame:
-            while track.shape[0] > quant * 1.5:
+            while track.shape[0] > quant + self.reference_frame * 1.5:
                 quant += self.reference_frame
         else:
             while track.shape[0] <= 1.5 * (quant // 2):
