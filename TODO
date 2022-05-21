@@ -1,2 +1,5 @@
-1. Volume control
-2. Normalization
+1. loop smooth transition (no click)
+2. save play/volume settings in savefile
+
+5. improve reset - reset more things
+6. Normalization

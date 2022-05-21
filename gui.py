@@ -323,11 +323,18 @@ class Screen(FloatLayout):
                 os.remove(name)
 
             for number, track in self.player.tracks.items():
+
                 name = "sv_{}".format(number)
                 with open(name, "wb") as savefile:
                     np.save(savefile, track.track[:track.len], allow_pickle=False, fix_imports=False)
-                    zippy.write(name)
+                zippy.write(name)
                 os.remove(name)
+
+                playing_name = name + ".playing"
+                with open(playing_name, "wb") as savefile:
+                    savefile.write(bytes(track.playing))
+                zippy.write(playing_name)
+                os.remove(playing_name)
 
     def load(self, path, filename):
         self.dismiss_popup()
@@ -342,11 +349,27 @@ class Screen(FloatLayout):
                     self.recorder.noise_sample = noise_sample
                 tracks.remove("sv_noise")
 
-            for track_save in tracks:
+            for track_save in tracks[:]:
+                if track_save.endswith(".playing"):
+                    continue
                 with zippy.open(track_save, "r") as track_file:
                     track = np.load(track_file)
                     number = int(track_save.split("_")[1])
                     self.add_track(number, track, self.recorder.get_spectrogram(track))
+                    tracks.remove(track_save)
+
+            for track_playing in tracks[:]:
+                with zippy.open(track_playing, "r") as track_file:
+                    content = track_file.read()
+                    playing = bool(content)
+                    number = int(track_playing.split(".")[0].split("_")[1])
+                    if playing:
+                        self.start_playing(number)
+                        self.tracks[number].on_playing_start()
+                    else:
+                        self.stop_playing(number)
+                        self.tracks[number].on_playing_stop()
+                    tracks.remove(track_playing)
 
     def export(self, path, filename):
         self.dismiss_popup()
