@@ -284,7 +284,6 @@ class Screen(FloatLayout):
             self.sampling_noise = False
             self.recorder.noise_sample = track.flatten()
             self.noise_sample_button_color = WHITE
-            #self.recorder.playback()
         else:
             track, spectrogram = self.recorder.postprocess(self.get_noise_threshold())
             self.add_track(self.current_track, track, spectrogram)
@@ -293,8 +292,6 @@ class Screen(FloatLayout):
         self._popup.dismiss(animation=False)
 
     def show_save(self):
-        print(self.filename)
-        print(type(self.filename))
         content = SaveDialog(
             save=self.save, cancel=self.dismiss_popup, extension=".looper",
             filename=self.filename, path=self.path
@@ -362,6 +359,7 @@ class Screen(FloatLayout):
         self.path = path
         self.filename = filename[0]
 
+        self.reset()
         with zipfile.ZipFile(filename[0], "r") as zippy:
             tracks = zippy.namelist()
             if "sv_noise" in tracks:
