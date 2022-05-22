@@ -184,15 +184,15 @@ class Screen(FloatLayout):
     @property
     def tracks_x(self):
         try:
-            return tracks.values()[0].box.x
-        except:
+            return list(self.tracks.values())[0].box.x
+        except (IndexError, AttributeError)  as e:
             return 0
 
     @property
     def tracks_width(self):
         try:
-            return tracks.values()[0].box.width
-        except:
+            return list(self.tracks.values())[0].box.width
+        except (IndexError, AttributeError):
             return 0
 
     def get_latency_adjustment(self):
@@ -230,9 +230,6 @@ class Screen(FloatLayout):
             self.trackLayout.remove_widget(track)
 
         self.tracks = {}
-        #track = Track(screen=self, number=1)
-        #self.trackLayout.add_widget(track)
-        #self.tracks[1] = track
 
     def reset(self):
         self.reset_tracks()
@@ -381,10 +378,10 @@ class Screen(FloatLayout):
         self.dismiss_popup()
         if not filename:
             return
-        self.path = path
-        self.filename = filename[0]
 
         self.reset()
+        self.path = path
+        self.filename = filename[0]
         with zipfile.ZipFile(filename[0], "r") as zippy:
             tracks = zippy.namelist()
             if "sv_noise" in tracks:
