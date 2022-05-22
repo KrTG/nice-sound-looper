@@ -158,12 +158,14 @@ class Recorder():
             return track[:-cut_samples], spect[:, :-cut_amount]
 
     def _quantize(self, track, spect):
+        print(track.shape[0])
         quant = self.reference_frame
         if track.shape[0] > self.reference_frame:
-            while track.shape[0] > quant + self.reference_frame * 1.2:
+            while track.shape[0] > quant + self.reference_frame * 0.5:
+                print(quant)
                 quant += self.reference_frame
         else:
-            while track.shape[0] <= 1.8 * (quant // 2):
+            while track.shape[0] <= 1.5 * (quant // 2):
                 quant //= 2
         padding = quant - track.shape[0]
         spect_padding = int((padding / track.shape[0]) * spect.shape[1])

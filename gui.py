@@ -93,6 +93,9 @@ class Track(BoxLayout):
         self.record_button_color = WHITE
         self.play_button_text = "Play"
         self.play_button_color = WHITE
+        self.info = "Info: "
+        if self.volume:
+            self.volume.set(1)
         Clock.schedule_interval(self.update_volume, 0.02)
 
     def on_press_record(self):
@@ -187,8 +190,8 @@ class Screen(FloatLayout):
         self.tracks = {1: self.track1, 2: self.track2, 3: self.track3, 4: self.track4}
         self.current_track = None
         self.sampling_noise = False
-        self.path = "."
-        self.filename = ""
+        self.path = None
+        self.filename = None
         self.recorder = recorder.Recorder(
             start_callback=self.on_recorder_start,
             stop_callback=self.on_recorder_stop
@@ -196,6 +199,7 @@ class Screen(FloatLayout):
         self.player = player.Player()
         self.player.start()
         Clock.schedule_interval(self.update_progress, 0.02)
+        self.reset()
 
     @property
     def tracks_x(self):
@@ -239,6 +243,8 @@ class Screen(FloatLayout):
         for t in self.tracks.values():
             t.reset()
         self.player.tracks = {}
+        self.path = "."
+        self.filename = ""
 
     def start_listening(self, track_number):
         self.current_track = track_number
