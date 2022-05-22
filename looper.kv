@@ -128,6 +128,7 @@
         Button:
             size_hint_x: None
             text: "Reset"
+            on_release: root.on_press_reset()
 
 <LoadDialog>:
     BoxLayout:
@@ -198,6 +199,8 @@
 <VolumeSlider>:
     slider: slider
     orientation: 'vertical'
+    size_hint_x: None
+    width: 60
     canvas.before:
         Color:
             rgba: (0.7, 0.7, 0.7, 1)

@@ -150,6 +150,8 @@ class Recorder():
         plt.plot(times, values)
         plt.savefig("prep.png")
 
+        print ("Cut due to even out:")
+        print (cut_samples / SR)
         if cut_amount >= spect.shape[1]:
             return track, spect
         else:
@@ -158,19 +160,23 @@ class Recorder():
     def _quantize(self, track, spect):
         quant = self.reference_frame
         if track.shape[0] > self.reference_frame:
-            while track.shape[0] > quant + self.reference_frame * 1.5:
+            while track.shape[0] > quant + self.reference_frame * 1.2:
                 quant += self.reference_frame
         else:
-            while track.shape[0] <= 1.5 * (quant // 2):
+            while track.shape[0] <= 1.8 * (quant // 2):
                 quant //= 2
         padding = quant - track.shape[0]
         spect_padding = int((padding / track.shape[0]) * spect.shape[1])
         if (padding >= 0):
             track = np.pad(track, ((0, padding), (0, 0)))
             spect = np.pad(spect, ((0, 0), (0, spect_padding)))
+            print ("Padding due to quantize:")
+            print (padding / SR)
         else:
             track = track[:padding]
             spect = spect[:, :spect_padding]
+            print ("Cut due to quantize:")
+            print (padding / SR)
 
 
         assert(track.shape[0] == quant)

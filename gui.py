@@ -114,6 +114,10 @@ class Track(BoxLayout):
         except player.PlayerException as e:
             print(str(e))
 
+    def on_press_reset(self):
+        self.reset()
+        self.screen.reset_track(self.number)
+
     def on_press_cut(self):
         try:
             self.screen.cut_track(self.number)
@@ -252,6 +256,9 @@ class Screen(FloatLayout):
 
     def stop_playing(self, track_number):
         self.player.pause(track_number)
+
+    def reset_track(self, track_number):
+        self.player.remove_track(track_number)
 
     def cut_track(self, track_number):
         spectrogram = self.player.cut(track_number)

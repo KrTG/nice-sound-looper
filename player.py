@@ -82,6 +82,9 @@ class Player():
     def add_track(self, n, track):
         self.tracks[n] = Track(track)
 
+    def remove_track(self, n):
+        del self.tracks[n]
+
     def start(self):
         self.stream.start()
 
