@@ -156,7 +156,7 @@
         orientation: "vertical"
         FileChooserListView:
             id: filechooser
-            path: "."
+            path: root.path
             on_selection: text_input.text = self.selection and self.selection[0] or ''
 
         BoxLayout:
@@ -168,6 +168,7 @@
                 text: "Save file: "
             TextInput:
                 id: text_input
+                text: root.filename
                 size_hint_x: 10
                 multiline: False
             Label:

@@ -60,9 +60,11 @@ class LoadDialog(FloatLayout):
     extension = ObjectProperty(None)
 
 class SaveDialog(FloatLayout):
-    save = ObjectProperty(None)
     cancel = ObjectProperty(None)
     extension = ObjectProperty(None)
+    filename = ObjectProperty(".")
+    path = StringProperty("")
+    save = ObjectProperty(None)
 
 class Track(BoxLayout):
     info = StringProperty("Info: ")
@@ -181,6 +183,8 @@ class Screen(FloatLayout):
         self.tracks = {1: self.track1, 2: self.track2, 3: self.track3, 4: self.track4}
         self.current_track = None
         self.sampling_noise = False
+        self.path = "."
+        self.filename = ""
         self.recorder = recorder.Recorder(
             start_callback=self.on_recorder_start,
             stop_callback=self.on_recorder_stop
@@ -289,7 +293,12 @@ class Screen(FloatLayout):
         self._popup.dismiss(animation=False)
 
     def show_save(self):
-        content = SaveDialog(save=self.save, cancel=self.dismiss_popup, extension=".looper")
+        print(self.filename)
+        print(type(self.filename))
+        content = SaveDialog(
+            save=self.save, cancel=self.dismiss_popup, extension=".looper",
+            filename=self.filename, path=self.path
+        )
         self._popup = Popup(
             title="Save file", content=content, size_hint=(0.9, 0.8), pos_hint={'y': 0.2},
             auto_dismiss=False
@@ -350,6 +359,8 @@ class Screen(FloatLayout):
         self.dismiss_popup()
         if not filename:
             return
+        self.path = path
+        self.filename = filename[0]
 
         with zipfile.ZipFile(filename[0], "r") as zippy:
             tracks = zippy.namelist()
