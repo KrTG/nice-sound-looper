@@ -62,7 +62,7 @@ class LoadDialog(FloatLayout):
 class SaveDialog(FloatLayout):
     cancel = ObjectProperty(None)
     extension = ObjectProperty(None)
-    filename = ObjectProperty(".")
+    filename = ObjectProperty("")
     path = StringProperty("")
     save = ObjectProperty(None)
 

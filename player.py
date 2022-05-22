@@ -127,7 +127,7 @@ class Player():
                 b = a + frames
                 chunk = track.track[a:b]
                 chunk = track.volume * chunk
-                chunks.append(track.track[a:b])
+                chunks.append(chunk)
                 _sum = sum(chunks)
             if output is None:
                 output = _sum
