@@ -71,8 +71,6 @@ class Track(BoxLayout):
     box = ObjectProperty(None)
     scale = NumericProperty(0)
     texture = ObjectProperty(None)
-    record_button_text = StringProperty("Record")
-    record_button_color = ObjectProperty(WHITE)
     play_button_text = StringProperty("Play")
     play_button_color = ObjectProperty(WHITE)
     number = NumericProperty(None)
@@ -121,17 +119,10 @@ class Track(BoxLayout):
         self.reset()
         self.screen.reset_track(self.number)
 
-    def on_press_cut(self):
-        try:
-            self.screen.cut_track(self.number)
-        except player.PlayerException as e:
-            print(str(e))
-
-    def on_recorder_start(self):
-        self.record_button_text = "Recording..."
-        self.record_button_color = GREEN
-
-    def set_spectrogram(self, spectrogram):
+    def set_track(self, track, spectrogram):
+        length = "{:.2f}".format(len(track) / recorder.SR)
+        s_length = "{}".format(spectrogram.shape[1])
+        self.info = "Info: \nLength: " + length
         spectrogram = librosa.power_to_db(spectrogram, ref=np.max)
         spectrogram += np.min(spectrogram)
         spectrogram /= np.max(spectrogram)
@@ -141,15 +132,7 @@ class Track(BoxLayout):
         spectrogram = np.repeat(spectrogram, 3, axis=2)
         self.new_texture = spectrogram
         self.track_length = self.new_texture.shape[1]
-        Clock.schedule_once(self.update_image)
-
-    def on_recorder_stop(self, spectrogram, track):
-        length = "{:.2f}".format(len(track) / recorder.SR)
-        s_length = "{}".format(spectrogram.shape[1])
-        self.info = "Info: \nLength: " + length
-        self.set_spectrogram(spectrogram)
-        self.record_button_text = "Record"
-        self.record_button_color = WHITE
+        self.texture = to_texture(self.new_texture)
 
     def on_playing_start(self):
         self.play_button_text = "Playing..."
@@ -164,9 +147,6 @@ class Track(BoxLayout):
     def set_scale(self, max_length):
         self.scale = self.track_length / max_length
 
-    def update_image(self, _):
-        self.texture = to_texture(self.new_texture)
-
     def update_volume(self, _):
         try:
             self.screen.player.tracks[self.number].volume = self.volume.get()
@@ -175,20 +155,20 @@ class Track(BoxLayout):
 
 
 class Screen(FloatLayout):
-    track1 = ObjectProperty(None)
-    track2 = ObjectProperty(None)
-    track3 = ObjectProperty(None)
-    track4 = ObjectProperty(None)
+    trackLayout = ObjectProperty(None)
     latency_adjustment = ObjectProperty(None)
     noise_threshold = ObjectProperty(None)
     noise_sample_button_color = ObjectProperty(WHITE)
     progress_bar = NumericProperty(0.0)
+
+    record_button_text = StringProperty("Record")
+    record_button_color = ObjectProperty(WHITE)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.config = None
         self.load_config()
-        self.tracks = {1: self.track1, 2: self.track2, 3: self.track3, 4: self.track4}
-        self.current_track = None
+        self.tracks = {}
         self.sampling_noise = False
         self.path = None
         self.filename = None
@@ -203,11 +183,17 @@ class Screen(FloatLayout):
 
     @property
     def tracks_x(self):
-        return 0 if self.track1 is None else self.track1.box.x
+        try:
+            return tracks.values()[0].box.x
+        except:
+            return 0
 
     @property
     def tracks_width(self):
-        return 0 if self.track1 is None else self.track1.box.width
+        try:
+            return tracks.values()[0].box.width
+        except:
+            return 0
 
     def get_latency_adjustment(self):
         try:
@@ -239,15 +225,30 @@ class Screen(FloatLayout):
         with open("config.json", "w") as config:
             json.dump(self.config, config)
 
+    def reset_tracks(self):
+        for track in self.tracks.values():
+            self.trackLayout.remove_widget(track)
+
+        self.tracks = {}
+        #track = Track(screen=self, number=1)
+        #self.trackLayout.add_widget(track)
+        #self.tracks[1] = track
+
     def reset(self):
-        for t in self.tracks.values():
-            t.reset()
+        self.reset_tracks()
         self.player.tracks = {}
         self.path = "."
         self.filename = ""
 
+    def on_press_record(self):
+        try:
+            self.start_listening(max(self.tracks, default=0) + 1)
+            self.record_button_text = "Waiting..."
+            self.record_button_color = YELLOW
+        except recorder.RecorderException as e:
+            print(str(e))
+
     def start_listening(self, track_number):
-        self.current_track = track_number
         if (len(self.player.tracks) == 0 or
             len(self.player.tracks) == 1 and self.player.tracks.get(track_number)):
             self.recorder.wait(self.player.get_reference_progress(exclude=track_number) - self.get_latency_adjustment())
@@ -264,12 +265,12 @@ class Screen(FloatLayout):
         self.player.pause(track_number)
 
     def reset_track(self, track_number):
-        self.player.remove_track(track_number)
-
-    def cut_track(self, track_number):
-        spectrogram = self.player.cut(track_number)
-        self.tracks[track_number].set_spectrogram(spectrogram)
-        self.rescale_tracks()
+        try:
+            self.player.remove_track(track_number)
+            self.trackLayout.remove_widget(self.tracks[track_number])
+            del self.tracks[track_number]
+        except player.PlayerException as e:
+            print(e)
 
     def get_noise_sample(self):
         self.sampling_noise = True
@@ -277,18 +278,25 @@ class Screen(FloatLayout):
         self.recorder.record(recorder.SR * 2.5)
 
     def on_recorder_start(self):
-        self.tracks[self.current_track].on_recorder_start()
+        self.record_button_text = "Recording..."
+        self.record_button_color = GREEN
 
     def rescale_tracks(self):
         max_len = max(t.track_length for t in self.tracks.values())
         for track in self.tracks.values():
             track.set_scale(max_len)
 
-    def add_track(self, number, track, spectrogram):
-        self.tracks[number].on_recorder_stop(spectrogram, track)
+    def add_track(self, track, spectrogram, number=None):
+        if number is None:
+            number = max(self.tracks, default=0) + 1
         self.player.add_track(number, track)
         self.player.play(number)
-        self.tracks[number].on_playing_start()
+
+        gui_track = Track(screen=self, number=number)
+        gui_track.set_track(track, spectrogram)
+        gui_track.on_playing_start()
+        self.trackLayout.add_widget(gui_track)
+        self.tracks[number] = gui_track
         self.rescale_tracks()
 
     def on_recorder_stop(self):
@@ -299,7 +307,11 @@ class Screen(FloatLayout):
             self.noise_sample_button_color = WHITE
         else:
             track, spectrogram = self.recorder.postprocess(self.get_noise_threshold())
-            self.add_track(self.current_track, track, spectrogram)
+            self.record_button_text = "Record"
+            self.record_button_color = WHITE
+            def callback(_):
+                self.add_track(track, spectrogram)
+            Clock.schedule_once(callback)
 
     def dismiss_popup(self):
         self._popup.dismiss(animation=False)
@@ -389,7 +401,7 @@ class Screen(FloatLayout):
                 with zippy.open(track_save, "r") as track_file:
                     track = np.load(track_file)
                     number = int(track_save.split("_")[1])
-                    self.add_track(number, track, self.recorder.get_spectrogram(track))
+                    self.add_track(track, self.recorder.get_spectrogram(track), number=number)
                     tracks.remove(track_save)
 
             for track_playing in tracks[:]:

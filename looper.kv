@@ -1,13 +1,15 @@
 <Screen>:
-    track1: track1
-    track2: track2
-    track3: track3
-    track4: track4
+    trackLayout: trackLayout
     latency_adjustment: latency_adjustment
     noise_threshold: noise_threshold
     BoxLayout:
         orientation: 'vertical'
+        Button:
+            text: root.record_button_text
+            background_color: root.record_button_color
+            on_release: root.on_press_record()
         BoxLayout:
+            id: trackLayout
             canvas.after:
                 Color:
                     rgba: (1, 0, 0, 1)
@@ -15,22 +17,6 @@
                     points: (root.tracks_x + int(root.progress_bar * root.tracks_width), self.pos[1], root.tracks_x + int(root.progress_bar * root.tracks_width), self.pos[1] + self.height)
             size_hint_y: 8
             orientation: 'vertical'
-            Track:
-                id: track1
-                screen: root
-                number: 1
-            Track:
-                id: track2
-                screen: root
-                number: 2
-            Track:
-                id: track3
-                screen: root
-                number: 3
-            Track:
-                id: track4
-                screen: root
-                number: 4
         BoxLayout:
             size_hint_y: 2
             orientation: 'horizontal'
@@ -120,11 +106,6 @@
             text_size: self.size
             halign: "left"
             valign: "top"
-        Button:
-            size_hint_x: None
-            text: root.record_button_text
-            background_color: root.record_button_color
-            on_release: root.on_press_record()
         Button:
             size_hint_x: None
             text: "Reset"

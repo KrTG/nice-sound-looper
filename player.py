@@ -83,7 +83,10 @@ class Player():
         self.tracks[n] = Track(track)
 
     def remove_track(self, n):
-        del self.tracks[n]
+        try:
+            del self.tracks[n]
+        except KeyError:
+            raise PlayerException("Cannot remove empty track.")
 
     def start(self):
         self.stream.start()
@@ -102,14 +105,6 @@ class Player():
             self.tracks[n].playing = False
         except KeyError:
             raise PlayerException("Empty track.")
-
-    def cut(self, n):
-        if self.tracks[n].len <= self.reference_frame:
-            raise PlayerException("Cannot cut longest track.")
-        try:
-            return self.tracks[n].cut(self.reference_frame)
-        except KeyError:
-            raise PlayerException("Cannot cut empty track.")
 
     def info(self):
         if not self.tracks:
