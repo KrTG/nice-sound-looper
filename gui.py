@@ -31,6 +31,7 @@ WHITE = (1, 1, 1, 1)
 GREEN = (0.4, 1, 0.4, 1)
 YELLOW = (1, 1, 0.4, 1)
 
+Window.size = (1024, 800)
 
 def to_texture(image):
     image = cv2.flip(image, 0)
@@ -67,7 +68,7 @@ class SaveDialog(FloatLayout):
     save = ObjectProperty(None)
 
 class Track(BoxLayout):
-    info = StringProperty("Info: ")
+    info_text = StringProperty("Info: ")
     box = ObjectProperty(None)
     scale = NumericProperty(0)
     texture = ObjectProperty(None)
@@ -83,7 +84,7 @@ class Track(BoxLayout):
 
     def reset(self):
         self.spectrogram = None
-        self.new_texture = None
+        self.np_texture = None
         self.track_length = 0
         self.scale = 0
         self.playing = False
@@ -91,7 +92,8 @@ class Track(BoxLayout):
         self.record_button_color = WHITE
         self.play_button_text = "Play"
         self.play_button_color = WHITE
-        self.info = "Info: "
+        self.info_text = ""
+        self.info = {"length": 0, "repeats": 0}
         if self.volume:
             self.volume.set(1)
         Clock.schedule_interval(self.update_volume, 0.02)
@@ -119,20 +121,29 @@ class Track(BoxLayout):
         self.reset()
         self.screen.reset_track(self.number)
 
+    def generate_info(self):
+        template ="""Length: {length}
+Repeats: {repeats}
+"""
+        self.info_text = template.format(length=self.info["length"], repeats=self.info["repeats"])
+
     def set_track(self, track, spectrogram):
         length = "{:.2f}".format(len(track) / recorder.SR)
         s_length = "{}".format(spectrogram.shape[1])
-        self.info = "Info: \nLength: " + length
+        self.info["length"] = length
+        self.generate_info()
         spectrogram = librosa.power_to_db(spectrogram, ref=np.max)
         spectrogram += np.min(spectrogram)
         spectrogram /= np.max(spectrogram)
         spectrogram *= 255
         spectrogram = np.array(spectrogram, dtype=np.uint8)
-        spectrogram = np.expand_dims(spectrogram, axis=2)
-        spectrogram = np.repeat(spectrogram, 3, axis=2)
-        self.new_texture = spectrogram
-        self.track_length = self.new_texture.shape[1]
-        self.texture = to_texture(self.new_texture)
+
+        self.np_texture = spectrogram
+        texture = self.np_texture[:]
+        texture = np.expand_dims(self.np_texture, axis=2)
+        texture = np.repeat(texture, 3, axis=2)
+        self.track_length = texture.shape[1]
+        self.texture = to_texture(texture)
 
     def on_playing_start(self):
         self.play_button_text = "Playing..."
@@ -145,7 +156,14 @@ class Track(BoxLayout):
         self.playing = False
 
     def set_scale(self, max_length):
-        self.scale = self.track_length / max_length
+        repeats = max_length // (self.track_length - 16) # small adjustment in case this is not a perfect division
+        repeated_texture = np.tile(self.np_texture, repeats)
+        texture = np.expand_dims(repeated_texture, axis=2)
+        texture = np.repeat(texture, 3, axis=2)
+        self.texture = to_texture(texture)
+        self.scale = 1
+        self.info["repeats"] = repeats
+        self.generate_info()
 
     def update_volume(self, _):
         try:
@@ -334,9 +352,12 @@ class Screen(FloatLayout):
         self._popup.open()
 
     def show_export(self):
-        content = SaveDialog(save=self.export, cancel=self.dismiss_popup, extension=".wav")
+        content = SaveDialog(
+            save=self.export, cancel=self.dismiss_popup, extension=".wav",
+            filename="", path="."
+        )
         self._popup = Popup(
-            title="Load file", content=content, size_hint=(0.9, 0.8), pos_hint={'y': 0.2},
+            title="Export file", content=content, size_hint=(0.9, 0.8), pos_hint={'y': 0.2},
             auto_dismiss=False
         )
         self._popup.open()
