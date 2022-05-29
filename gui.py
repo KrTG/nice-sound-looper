@@ -157,6 +157,7 @@ class Track(BoxLayout):
 class Screen(FloatLayout):
     trackLayout = ObjectProperty(None)
     latency_adjustment = ObjectProperty(None)
+    export_length = ObjectProperty(None)
     noise_threshold = ObjectProperty(None)
     noise_sample_button_color = ObjectProperty(WHITE)
     progress_bar = NumericProperty(0.0)
@@ -434,7 +435,11 @@ class Screen(FloatLayout):
         if not filename.endswith(".wav"):
             filename += ".wav"
 
-        output = self.player.export()
+        try:
+            length = int(self.export_length.text)
+        except ValueError:
+            print ("Invalid value for 'Minimum length'")
+        output = self.player.export(min_length=length)
         with soundfile.SoundFile(filename, "w", samplerate=player.SR, channels=1) as wav:
             wav.write(output)
 

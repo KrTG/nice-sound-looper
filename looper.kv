@@ -1,4 +1,5 @@
 <Screen>:
+    export_length: export_length
     trackLayout: trackLayout
     latency_adjustment: latency_adjustment
     noise_threshold: noise_threshold
@@ -28,10 +29,17 @@
                 size_hint_x: 3
                 text: "Load Project"
                 on_release: root.show_load()
-            Button:
+            BoxLayout:
+                orientation: "vertical"
                 size_hint_x: 3
-                text: "Export"
-                on_release: root.show_export()
+                Label:
+                    text: "Minimum length"
+                TextInput:
+                    id: export_length
+                    text: "30"
+                Button:
+                    text: "Export"
+                    on_release: root.show_export()
             Button:
                 size_hint_x: 3
                 text: "Info"

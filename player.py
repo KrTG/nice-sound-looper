@@ -116,11 +116,13 @@ class Player():
         print (min(output))
         print (np.average(output))
 
-    def export(self, length=30):
+    def export(self, min_length):
+        length = (1 + min_length * SR // self.length) * self.length
+
         frames = 5000
         output = None
         progress = 0
-        while progress < length * SR:
+        while progress < length:
             chunks = []
             for track in self.tracks.values():
                 a = progress % track.len
