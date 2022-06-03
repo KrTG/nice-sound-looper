@@ -285,6 +285,7 @@ class Screen(FloatLayout):
             self.player.remove_track(track_number)
             self.trackLayout.remove_widget(self.tracks[track_number])
             del self.tracks[track_number]
+            self.rescale_tracks()
         except player.PlayerException as e:
             print(e)
 
@@ -298,7 +299,7 @@ class Screen(FloatLayout):
         self.record_button_color = GREEN
 
     def rescale_tracks(self):
-        max_len = max(t.track_length for t in self.tracks.values())
+        max_len = max((t.track_length for t in self.tracks.values()), default=0)
         for track in self.tracks.values():
             track.set_scale(max_len)
 
