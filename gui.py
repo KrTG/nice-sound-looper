@@ -503,7 +503,8 @@ class Screen(FloatLayout):
             return
         with soundfile.SoundFile(filename, "r") as wav:
             new_track = np.expand_dims(wav.read(), 1)
-            print (new_track.shape)
+            if new_track.shape[0] == 0:
+                raise RuntimeError("Read error.")
             padding = self.player.tracks[number].len - new_track.shape[0]
             if padding > 0:
                 mean_value = (new_track[0] + new_track[-1]) / 2
@@ -530,9 +531,11 @@ class Screen(FloatLayout):
                 last_changed = os.stat(track.watch_file).st_mtime
                 if last_changed > track.watch_file_last_changed:
                     print ("Track {n} change detected".format(n=track.number))
-                    self.refresh_track(track.number)
-                    track.watch_file_last_changed = last_changed
-
+                    try:
+                        self.refresh_track(track.number)
+                        track.watch_file_last_changed = last_changed
+                    except RuntimeError:
+                        pass
     def info(self):
         self.player.info()
 
