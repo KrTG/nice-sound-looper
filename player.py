@@ -64,7 +64,7 @@ class Player():
         if len(tracks) == 0:
             return None
         else:
-            return min(t.len for t in tracks)
+            return max(t.len for t in tracks)
 
     @property
     def length(self):
