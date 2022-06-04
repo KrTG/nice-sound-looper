@@ -24,14 +24,8 @@ class Track():
         self.progress = 0
         self.frames = 0
 
-    def cut(self, amount):
-        track = self.track[:self.len]
-        track = track[:-amount]
-        spect = librosa.feature.melspectrogram(y=track.flatten(), sr=SR, n_mels=128, fmax=10000, hop_length=HOP_LENGTH)
-        self.len = track.shape[0]
-        self.track = np.tile(track, (2, 1))
-
-        return spect
+    def get_track(self):
+        return self.track[:self.len]
 
 class Player():
     def __init__(self):
@@ -115,6 +109,12 @@ class Player():
         print (max(output))
         print (min(output))
         print (np.average(output))
+
+    def get_track(self, number):
+        try:
+            return self.tracks[number].get_track()
+        except KeyError:
+            raise PlayerException("Empty track.")
 
     def export(self, min_length):
         length = (1 + min_length * SR // self.length) * self.length

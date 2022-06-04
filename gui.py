@@ -93,7 +93,9 @@ class Track(BoxLayout):
         self.play_button_text = "Play"
         self.play_button_color = WHITE
         self.info_text = ""
-        self.info = {"length": 0, "repeats": 0}
+        self.info = {"length": 0, "samples": 0, "repeats": 0}
+        self.watch_file = None
+        self.watch_file_last_changed = 0
         if self.volume:
             self.volume.set(1)
         Clock.schedule_interval(self.update_volume, 0.02)
@@ -117,19 +119,24 @@ class Track(BoxLayout):
         except player.PlayerException as e:
             print(str(e))
 
+    def on_press_export(self):
+        self.screen.show_export_track(self.number)
+
     def on_press_reset(self):
         self.reset()
         self.screen.reset_track(self.number)
 
     def generate_info(self):
         template ="""Length: {length}
+Samples: {samples}
 Repeats: {repeats}
 """
-        self.info_text = template.format(length=self.info["length"], repeats=self.info["repeats"])
+        self.info_text = template.format(**self.info)
 
     def set_track(self, track, spectrogram):
         length = "{:.2f}".format(len(track) / recorder.SR)
         s_length = "{}".format(spectrogram.shape[1])
+        self.info["samples"] = len(track)
         self.info["length"] = length
         self.generate_info()
         spectrogram = librosa.power_to_db(spectrogram, ref=np.max)
@@ -156,7 +163,7 @@ Repeats: {repeats}
         self.playing = False
 
     def set_scale(self, max_length):
-        repeats = max_length // (self.track_length - 16) # small adjustment in case this is not a perfect division
+        repeats = max(0, max_length // (self.track_length - 16)) # small adjustment in case this is not a perfect division
         repeated_texture = np.tile(self.np_texture, repeats)
         texture = np.expand_dims(repeated_texture, axis=2)
         texture = np.repeat(texture, 3, axis=2)
@@ -198,6 +205,7 @@ class Screen(FloatLayout):
         self.player = player.Player()
         self.player.start()
         Clock.schedule_interval(self.update_progress, 0.02)
+        Clock.schedule_interval(self.watch_for_changes, 1)
         self.reset()
 
     @property
@@ -363,6 +371,17 @@ class Screen(FloatLayout):
         )
         self._popup.open()
 
+    def show_export_track(self, number):
+        content = SaveDialog(
+            save=lambda p, f: self.export_track(number, p, f), cancel=self.dismiss_popup, extension=".wav",
+            filename="", path="."
+        )
+        self._popup = Popup(
+            title="Export single track as .wav", content=content, size_hint=(0.9, 0.8), pos_hint={'y': 0.2},
+            auto_dismiss=False
+        )
+        self._popup.open()
+
     def save(self, path, filename):
         self.dismiss_popup()
         if not filename:
@@ -450,9 +469,9 @@ class Screen(FloatLayout):
                     tracks.remove(track_volume)
 
     def export(self, path, filename):
-        self.dismiss_popup()
         if not filename:
             return
+        self.dismiss_popup()
 
         if not filename.endswith(".wav"):
             filename += ".wav"
@@ -465,11 +484,54 @@ class Screen(FloatLayout):
         with soundfile.SoundFile(filename, "w", samplerate=player.SR, channels=1) as wav:
             wav.write(output)
 
+    def export_track(self, number, path, filename):
+        if not filename:
+            return
+        self.dismiss_popup()
+
+        if not filename.endswith(".wav"):
+            filename += ".wav"
+        with soundfile.SoundFile(filename, "w", samplerate=player.SR, channels=1) as wav:
+            wav.write(self.player.get_track(number))
+
+        self.tracks[number].watch_file = filename
+        self.tracks[number].watch_file_last_changed = os.stat(filename).st_mtime
+
+    def refresh_track(self, number):
+        filename = self.tracks[number].watch_file
+        if filename is None:
+            return
+        with soundfile.SoundFile(filename, "r") as wav:
+            new_track = np.expand_dims(wav.read(), 1)
+            print (new_track.shape)
+            padding = self.player.tracks[number].len - new_track.shape[0]
+            if padding > 0:
+                mean_value = (new_track[0] + new_track[-1]) / 2
+                new_track = np.pad(new_track, ((0, padding), (0, 0)), constant_values=mean_value)
+            else:
+                new_track = new_track[:self.player.tracks[number].len]
+
+        new_spectrogram = self.recorder.get_spectrogram(new_track)
+        self.player.add_track(number, new_track)
+        self.player.play(number)
+        self.tracks[number].set_track(new_track, new_spectrogram)
+        self.tracks[number].on_playing_start()
+        self.rescale_tracks()
+
     def update_progress(self, _):
         reference = self.player.get_max_frame()
         if reference is None:
             reference = 1
         self.progress_bar = self.player.get_max_progress() / reference
+
+    def watch_for_changes(self, _):
+        for track in self.tracks.values():
+            if track.watch_file is not None:
+                last_changed = os.stat(track.watch_file).st_mtime
+                if last_changed > track.watch_file_last_changed:
+                    print ("Track {n} change detected".format(n=track.number))
+                    self.refresh_track(track.number)
+                    track.watch_file_last_changed = last_changed
 
     def info(self):
         self.player.info()

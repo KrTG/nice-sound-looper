@@ -117,6 +117,12 @@
             valign: "top"
         Button:
             size_hint_x: None
+            text: "Export track and watch for changes"
+            text_size: self.width, None
+            halign: "center"
+            on_release: root.on_press_export()
+        Button:
+            size_hint_x: None
             text: "Reset"
             on_release: root.on_press_reset()
 
