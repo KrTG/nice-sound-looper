@@ -134,7 +134,24 @@
         FileChooserListView:
             id: filechooser
             path: "."
-            filters: ["*" + root.extension]
+            filters: ["*" + ("" if extension_checkbox.active else root.extension)]
+
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: None
+            height: 30
+            Label:
+                size_hint_x: 2
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+                text: "Show all files:"
+            CheckBox:
+                size_hint_x: None
+                width: 20
+                id: extension_checkbox
+            Label:
+                size_hint_x: 12
 
         BoxLayout:
             size_hint_y: None
@@ -154,6 +171,7 @@
         FileChooserListView:
             id: filechooser
             path: root.path
+            filters: ["*" + ("" if extension_checkbox.active else root.extension)]
             on_selection: text_input.text = self.selection and self.selection[0] or ''
 
         BoxLayout:
@@ -162,6 +180,26 @@
             height: 30
             Label:
                 size_hint_x: 2
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
+                text: "Show all files:"
+            CheckBox:
+                size_hint_x: None
+                width: 20
+                id: extension_checkbox
+            Label:
+                size_hint_x: 12
+
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: None
+            height: 30
+            Label:
+                size_hint_x: 2
+                halign: "left"
+                valign: "middle"
+                text_size: self.size
                 text: "Save file: "
             TextInput:
                 id: text_input
