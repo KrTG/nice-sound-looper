@@ -158,7 +158,7 @@ class Recorder():
 
         fig, ax = plt.subplots()
         plt.plot(times[:len(values)], values / max(values), label="values")
-        plt.plot(times[:len(adjusted_values)], adjusted_values / max(adjusted_values), label="log adjusted values")
+        plt.plot(times[:len(adjusted_values)], adjusted_values / max(adjusted_values), label="adjusted values")
         plt.legend()
         plt.savefig("prep.png")
 
