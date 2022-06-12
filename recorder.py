@@ -156,7 +156,7 @@ class Recorder():
 
         times = _range * HOP_LENGTH / SR
 
-        #fig, ax = plt.subplots()
+        fig, ax = plt.subplots()
         plt.plot(times[:len(values)], values / max(values), label="values")
         plt.plot(times[:len(adjusted_values)], adjusted_values / max(adjusted_values), label="log adjusted values")
         plt.legend()
