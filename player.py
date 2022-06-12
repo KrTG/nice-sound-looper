@@ -7,7 +7,7 @@ from const import *
 
 sd.default.samplerate = SR
 sd.default.channels = CHANNELS
-
+sd.default.blocksize = BLOCKSIZE
 
 class PlayerException(Exception):
     pass
@@ -117,7 +117,7 @@ class Player():
     def export(self, min_length):
         length = (1 + min_length * SR // self.length) * self.length
 
-        frames = 5000
+        frames = BLOCKSIZE
         output = None
         progress = 0
         while progress < length:

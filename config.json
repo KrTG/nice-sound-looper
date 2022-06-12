@@ -1,1 +1,1 @@
-{"latency_adjustment": 8800, "noise_threshold": 0.5}
+{"latency_adjustment": 8800, "noise_threshold": 0.5, "silence_threshold": 0.012, "silence_window": 2.5}

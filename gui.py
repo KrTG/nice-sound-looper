@@ -161,7 +161,8 @@ Repeats: {repeats}
         self.playing = False
 
     def set_scale(self, max_length):
-        repeats = max(0, max_length // (self.track_length - 16)) # small adjustment in case this is not a perfect division
+        divisor = max(self.track_length, self.track_length - 16)
+        repeats = max(0, max_length // divisor) # small adjustment in case this is not a perfect division
         repeated_texture = np.tile(self.np_texture, repeats)
         texture = np.expand_dims(repeated_texture, axis=2)
         texture = np.repeat(texture, 3, axis=2)
@@ -182,6 +183,8 @@ class Screen(FloatLayout):
     latency_adjustment = ObjectProperty(None)
     export_length = ObjectProperty(None)
     noise_threshold = ObjectProperty(None)
+    silence_threshold = ObjectProperty(None)
+    silence_window = ObjectProperty(None)
     noise_sample_button_color = ObjectProperty(WHITE)
     progress_bar = NumericProperty(0.0)
 
@@ -225,28 +228,51 @@ class Screen(FloatLayout):
             return int(self.latency_adjustment.text)
         except ValueError:
             print("Latency adjustment not an integer")
-            return 0
+            return DEFAULT_LATENCY_ADJUSTMENT
 
     def get_noise_threshold(self):
         try:
             return float(self.noise_threshold.text)
         except ValueError:
             print("Noise threshold is not a number")
-            return 0
+            return DEFAULT_NOISE_THRESHOLD
+
+    def get_silence_threshold(self):
+        try:
+            return float(self.silence_threshold.text)
+        except ValueError:
+            print("Noise threshold is not a number")
+            return DEFAULT_SILENCE_THRESHOLD
+
+    def get_silence_window(self):
+        try:
+            return float(self.silence_window.text)
+        except ValueError:
+            print("Noise threshold is not a number")
+            return DEFAULT_SILENCE_WINDOW
 
     def load_config(self):
         with open("config.json") as config:
             try:
                 self.config = json.load(config)
             except:
-                self.config = { "latency_adjustment": 0, "noise_threshold": 1.0 }
+                self.config = {}
+        self.config.setdefault("latency_adjustment", DEFAULT_LATENCY_ADJUSTMENT)
+        self.config.setdefault("noise_threshold", DEFAULT_NOISE_THRESHOLD)
+        self.config.setdefault("silence_threshold", DEFAULT_SILENCE_THRESHOLD)
+        self.config.setdefault("silence_window", DEFAULT_SILENCE_WINDOW)
 
         self.latency_adjustment.text = str(self.config["latency_adjustment"])
         self.noise_threshold.text = str(self.config["noise_threshold"])
+        self.silence_threshold.text = str(self.config["silence_threshold"])
+        self.silence_window.text = str(self.config["silence_window"])
+
 
     def save_config(self):
         self.config["latency_adjustment"] = self.get_latency_adjustment()
         self.config["noise_threshold"] = self.get_noise_threshold()
+        self.config["silence_threshold"] = self.get_silence_threshold()
+        self.config["silence_window"] = self.get_silence_window()
         with open("config.json", "w") as config:
             json.dump(self.config, config)
 
@@ -273,11 +299,17 @@ class Screen(FloatLayout):
     def start_listening(self, track_number):
         if (len(self.player.tracks) == 0 or
             len(self.player.tracks) == 1 and self.player.tracks.get(track_number)):
-            self.recorder.wait(self.player.get_reference_progress(exclude=track_number) - self.get_latency_adjustment())
+            self.recorder.wait(
+                self.player.get_reference_progress(exclude=track_number) - self.get_latency_adjustment(),
+                self.get_silence_threshold(),
+                self.get_silence_window()
+            )
         else:
             self.recorder.wait(
                 self.player.get_reference_progress(exclude=track_number) - self.get_latency_adjustment(),
-                self.player.get_reference_frame(exclude=track_number)
+                self.get_silence_threshold(),
+                self.get_silence_window(),
+                reference_frame=self.player.get_reference_frame(exclude=track_number)
             )
 
     def start_playing(self, track_number):

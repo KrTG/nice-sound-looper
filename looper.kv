@@ -3,6 +3,8 @@
     trackLayout: trackLayout
     latency_adjustment: latency_adjustment
     noise_threshold: noise_threshold
+    silence_threshold: silence_threshold
+    silence_window: silence_window
     BoxLayout:
         orientation: 'vertical'
         Button:
@@ -42,15 +44,11 @@
                     on_release: root.show_export()
             Button:
                 size_hint_x: 3
-                text: "Info"
-                on_release: root.info()
-            Button:
-                size_hint_x: 3
                 text: "Reset"
                 on_release: root.reset()
             BoxLayout:
                 orientation: 'vertical'
-                size_hint_x:8
+                size_hint_x:16
                 BoxLayout:
                     size_hint_y: 4
                     orientation: 'horizontal'
@@ -61,6 +59,22 @@
                             text: "latency adjustment"
                         TextInput:
                             id: latency_adjustment
+                            text: "0"
+                    BoxLayout:
+                        size_hint_x:2
+                        orientation: 'vertical'
+                        Label:
+                            text: "STOP: max volume"
+                        TextInput:
+                            id: silence_threshold
+                            text: "0"
+                    BoxLayout:
+                        size_hint_x:2
+                        orientation: 'vertical'
+                        Label:
+                            text: "STOP: silence time(s)"
+                        TextInput:
+                            id: silence_window
                             text: "0"
                     BoxLayout:
                         size_hint_x:2
