@@ -2,10 +2,8 @@ import librosa
 import numpy as np
 import sounddevice as sd
 
-SR = 48000
-FFT_WIDTH = 2048
-HOP_LENGTH = 512
-CHANNELS = 1
+from const import *
+
 
 sd.default.samplerate = SR
 sd.default.channels = CHANNELS

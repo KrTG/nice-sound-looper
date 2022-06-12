@@ -165,3 +165,5 @@ prep.png
 config.json
 *.looper
 *.wav
+work/
+.vscode/

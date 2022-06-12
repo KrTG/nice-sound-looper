@@ -1,6 +1,6 @@
-import player
-import recorder
-from gui_lib import StretchImage
+import json
+import os
+import zipfile
 
 import cv2
 import librosa
@@ -23,15 +23,13 @@ from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.slider import Slider
 
-import json
-import os
-import zipfile
+import player
+import recorder
+from gui_lib import StretchImage
+from const import *
 
-WHITE = (1, 1, 1, 1)
-GREEN = (0.4, 1, 0.4, 1)
-YELLOW = (1, 1, 0.4, 1)
 
-Window.size = (1024, 800)
+Window.size = WINDOW_SIZE
 
 def to_texture(image):
     image = cv2.flip(image, 0)
@@ -311,6 +309,10 @@ class Screen(FloatLayout):
         for track in self.tracks.values():
             track.set_scale(max_len)
 
+    def postprocess_and_add_track(self, _):
+        track, spectrogram = self.recorder.postprocess(self.get_noise_threshold())
+        self.add_track(track, spectrogram)
+
     def add_track(self, track, spectrogram, number=None):
         if number is None:
             number = max(self.tracks, default=0) + 1
@@ -328,15 +330,12 @@ class Screen(FloatLayout):
         if self.sampling_noise:
             track = self.recorder.raw()
             self.sampling_noise = False
-            self.recorder.noise_sample = track.flatten()
+            self.recorder.noise_sample = track
             self.noise_sample_button_color = WHITE
         else:
-            track, spectrogram = self.recorder.postprocess(self.get_noise_threshold())
             self.record_button_text = "Record"
             self.record_button_color = WHITE
-            def callback(_):
-                self.add_track(track, spectrogram)
-            Clock.schedule_once(callback)
+            Clock.schedule_once(self.postprocess_and_add_track)
 
     def dismiss_popup(self):
         self._popup.dismiss(animation=False)
@@ -428,7 +427,7 @@ class Screen(FloatLayout):
             tracks = zippy.namelist()
             if "sv_noise" in tracks:
                 with zippy.open("sv_noise", "r") as noise_file:
-                    noise_sample = np.load(noise_file)
+                    noise_sample = np.load(noise_file)[:,:CHANNELS]
                     self.recorder.noise_sample = noise_sample
                 tracks.remove("sv_noise")
 
@@ -438,7 +437,7 @@ class Screen(FloatLayout):
                 if track_save.endswith(".volume"):
                     continue
                 with zippy.open(track_save, "r") as track_file:
-                    track = np.load(track_file)
+                    track = np.load(track_file)[:,:CHANNELS]
                     number = int(track_save.split("_")[1])
                     self.add_track(track, self.recorder.get_spectrogram(track), number=number)
                     tracks.remove(track_save)
@@ -481,7 +480,7 @@ class Screen(FloatLayout):
         except ValueError:
             print ("Invalid value for 'Minimum length'")
         output = self.player.export(min_length=length)
-        with soundfile.SoundFile(filename, "w", samplerate=player.SR, channels=1) as wav:
+        with soundfile.SoundFile(filename, "w", samplerate=player.SR, channels=CHANNELS) as wav:
             wav.write(output)
 
     def export_track(self, number, path, filename):
@@ -491,7 +490,7 @@ class Screen(FloatLayout):
 
         if not filename.endswith(".wav"):
             filename += ".wav"
-        with soundfile.SoundFile(filename, "w", samplerate=player.SR, channels=1) as wav:
+        with soundfile.SoundFile(filename, "w", samplerate=player.SR, channels=CHANNELS) as wav:
             wav.write(self.player.get_track(number))
 
         self.tracks[number].watch_file = filename
@@ -502,7 +501,7 @@ class Screen(FloatLayout):
         if filename is None:
             return
         with soundfile.SoundFile(filename, "r") as wav:
-            new_track = np.expand_dims(wav.read(), 1)
+            new_track = wav.read(always_2d=True)[:,:CHANNELS]
             if new_track.shape[0] == 0:
                 raise RuntimeError("Read error.")
             padding = self.player.tracks[number].len - new_track.shape[0]

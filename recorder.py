@@ -8,11 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sounddevice as sd
 
+from const import *
 
-SR = 48000
-FFT_WIDTH = 2048
-HOP_LENGTH = 512
-CHANNELS = 1
 
 sd.default.samplerate = SR
 sd.default.channels = CHANNELS
@@ -114,18 +111,18 @@ class Recorder():
         return track, spect
 
     def get_spectrogram(self, track):
-        return librosa.feature.melspectrogram(y=track.flatten(), sr=SR, n_mels=128, fmax=10000, hop_length=HOP_LENGTH)
+        track = librosa.feature.melspectrogram(y=track[:, 0], sr=SR, n_mels=128, fmax=10000, hop_length=HOP_LENGTH)
+        return track
 
     def _noise_reduce(self, track, noise_threshold):
         track = noisereduce.reduce_noise(
-            track.flatten(),
+            np.swapaxes(track, 0, 1),
             sr=SR,
             stationary=True,
             n_std_thresh_stationary=noise_threshold,
             y_noise=self.noise_sample
         )
-        track = np.expand_dims(track, 1)
-
+        track = np.swapaxes(track, 0, 1)
         return track
 
     def _even_out(self, track):
