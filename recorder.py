@@ -36,6 +36,10 @@ class Recorder():
         self._state = State.STOPPED
         self.stream = sd.InputStream(callback=self.callback)
 
+        self.start_threshold = DEFAULT_START_THRESHOLD
+        self.start_window = max(1, int(DEFAULT_START_WINDOW * SR) // BLOCKSIZE)
+        self.silence_threshold = DEFAULT_SILENCE_THRESHOLD
+        self.silence_window = max(1, int(DEFAULT_SILENCE_WINDOW * SR) // BLOCKSIZE)
         self.start_time = 0
         self.reference_frame = None
 
@@ -125,7 +129,7 @@ class Recorder():
             sr=SR,
             stationary=True,
             n_std_thresh_stationary=noise_threshold,
-            y_noise=self.noise_sample
+            y_noise=None if self.noise_sample is None else np.swapaxes(self.noise_sample, 0, 1)
         )
         track = np.swapaxes(track, 0, 1)
         return track

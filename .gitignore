@@ -167,3 +167,4 @@ config.json
 *.wav
 work/
 .vscode/
+*.zip

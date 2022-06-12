@@ -1,5 +1,7 @@
-1. configure trigger volume and trigger silence length
-4. Choose start point for export
-5. click generator
-8. loop smooth transition (no click)
+1. Choose start point for export
+2. Dont render muted parts (allow to mix & match)
+
+
+6. loop smooth transition (no click)
+8. click generator
 9. more dual channel support

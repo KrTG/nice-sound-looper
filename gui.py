@@ -1,5 +1,6 @@
 import json
 import os
+import traceback
 import zipfile
 
 import cv2
@@ -207,6 +208,7 @@ class Screen(FloatLayout):
         self.player.start()
         Clock.schedule_interval(self.update_progress, 0.02)
         Clock.schedule_interval(self.watch_for_changes, 1)
+        Clock.schedule_interval(self.autosave, AUTOSAVE_FREQ)
         self.reset()
 
     @property
@@ -342,8 +344,11 @@ class Screen(FloatLayout):
             track.set_scale(max_len)
 
     def postprocess_and_add_track(self, _):
-        track, spectrogram = self.recorder.postprocess(self.get_noise_threshold())
-        self.add_track(track, spectrogram)
+        try:
+            track, spectrogram = self.recorder.postprocess(self.get_noise_threshold())
+            self.add_track(track, spectrogram)
+        except Exception as e:
+            print(traceback.format_exception(e))
 
     def add_track(self, track, spectrogram, number=None):
         if number is None:
@@ -413,8 +418,10 @@ class Screen(FloatLayout):
         )
         self._popup.open()
 
-    def save(self, path, filename):
-        self.dismiss_popup()
+    def save(self, path, filename, autosave=False):
+        if not autosave:
+            self.dismiss_popup()
+
         if not filename:
             return
         if not filename.endswith(".looper"):
@@ -422,6 +429,8 @@ class Screen(FloatLayout):
 
         self.path = path
         self.filename = filename
+        print(path)
+        print(filename)
 
         with zipfile.ZipFile(os.path.join(path, filename), "w") as zippy:
             if self.recorder.noise_sample is not None:
@@ -565,14 +574,14 @@ class Screen(FloatLayout):
             if track.watch_file is not None:
                 last_changed = os.stat(track.watch_file).st_mtime
                 if last_changed > track.watch_file_last_changed:
-                    print ("Track {n} change detected".format(n=track.number))
                     try:
                         self.refresh_track(track.number)
                         track.watch_file_last_changed = last_changed
                     except RuntimeError:
                         pass
-    def info(self):
-        self.player.info()
+
+    def autosave(self, _):
+        self.save(".", "autosave.looper", autosave=True)
 
 
 class LooperApp(App):

@@ -98,16 +98,6 @@ class Player():
         except KeyError:
             raise PlayerException("Empty track.")
 
-    def info(self):
-        if not self.tracks:
-            return
-        length = max(t.len for t in self.tracks.values()) // SR
-        print(length)
-        output = self.export(length)
-        print (max(output))
-        print (min(output))
-        print (np.average(output))
-
     def get_track(self, number):
         try:
             return self.tracks[number].get_track()
