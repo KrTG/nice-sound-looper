@@ -1,6 +1,4 @@
 1. configure trigger volume and trigger silence length
-2. save/load only 'looper' files (add option to choose all)
-3. after saving once, remember the file name
 4. Choose start point for export
 5. click generator
 8. loop smooth transition (no click)

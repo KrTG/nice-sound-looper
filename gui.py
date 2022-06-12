@@ -385,9 +385,12 @@ class Screen(FloatLayout):
         self.dismiss_popup()
         if not filename:
             return
-
         if not filename.endswith(".looper"):
             filename += ".looper"
+
+        self.path = path
+        self.filename = filename
+
         with zipfile.ZipFile(os.path.join(path, filename), "w") as zippy:
             if self.recorder.noise_sample is not None:
                 name = "sv_noise"
@@ -423,6 +426,7 @@ class Screen(FloatLayout):
         self.reset()
         self.path = path
         self.filename = filename[0]
+
         with zipfile.ZipFile(filename[0], "r") as zippy:
             tracks = zippy.namelist()
             if "sv_noise" in tracks:
