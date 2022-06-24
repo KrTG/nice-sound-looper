@@ -1,3 +1,4 @@
+import glob
 import json
 import os
 import traceback
@@ -162,8 +163,9 @@ Repeats: {repeats}
         self.playing = False
 
     def set_scale(self, max_length):
-        divisor = max(self.track_length, self.track_length - 16)
-        repeats = max(0, max_length // divisor) # small adjustment in case this is not a perfect division
+        divisor = self.track_length
+        repeats = round(max(0, max_length / self.track_length)) # small adjustment in case this is not a perfect division
+
         repeated_texture = np.tile(self.np_texture, repeats)
         texture = np.expand_dims(repeated_texture, axis=2)
         texture = np.repeat(texture, 3, axis=2)
@@ -427,10 +429,9 @@ class Screen(FloatLayout):
         if not filename.endswith(".looper"):
             filename += ".looper"
 
-        self.path = path
-        self.filename = filename
-        print(path)
-        print(filename)
+        if not autosave:
+            self.path = path
+            self.filename = filename
 
         with zipfile.ZipFile(os.path.join(path, filename), "w") as zippy:
             if self.recorder.noise_sample is not None:
@@ -581,7 +582,15 @@ class Screen(FloatLayout):
                         pass
 
     def autosave(self, _):
-        self.save(".", "autosave.looper", autosave=True)
+        if len(self.player.tracks) > 0:
+            autosaves = glob.glob("autosave.[0-6].looper")
+            autosaves.sort(key=lambda x: int(x.split(".")[1]), reverse=True)
+            for f in autosaves:
+                number = int(f.split(".")[1])
+                next_number = number + 1
+                os.rename(f, "autosave.{}.looper".format(next_number))
+            self.save(".", "autosave.0.looper", autosave=True)
+
 
 
 class LooperApp(App):
