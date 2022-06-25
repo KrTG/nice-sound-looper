@@ -62,8 +62,6 @@ class Player():
         change = int(frame * percent_change)
         for track in self.tracks.values():
             adjustment = change % track.len
-            print(adjustment)
-            print(track.track.shape)
             track.track = np.concatenate((track.track[adjustment:], track.track[:adjustment]))
 
     @property
@@ -115,12 +113,16 @@ class Player():
         while progress < length:
             chunks = []
             for track in self.tracks.values():
-                a = progress % track.len
-                b = a + frames
-                chunk = track.track[a:b]
-                chunk = track.volume * chunk
-                chunks.append(chunk)
+                if track.playing:
+                    a = progress % track.len
+                    b = a + frames
+                    chunk = track.track[a:b]
+                    chunk = track.volume * chunk
+                    chunks.append(chunk)
+            if chunks:
                 _sum = sum(chunks)
+            else:
+                _sum = np.zeros(shape=(frames, CHANNELS))
             if output is None:
                 output = _sum
             else:
@@ -142,5 +144,5 @@ class Player():
         if chunks:
             outdata[:] = sum(chunks)
         else:
-            outdata[:] = np.zeros(shape=(frames, 1))
+            outdata[:] = np.zeros(shape=(frames, CHANNELS))
         self.play_index += frames

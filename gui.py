@@ -10,6 +10,7 @@ import numpy as np
 import soundfile
 
 from kivy.app import App
+from kivy.config import Config
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.graphics import Rectangle
@@ -30,7 +31,7 @@ import recorder
 from gui_lib import StretchImage
 from const import *
 
-
+Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
 Window.size = WINDOW_SIZE
 
 def to_texture(image):
@@ -553,7 +554,7 @@ class Screen(FloatLayout):
 
         if not filename.endswith(".wav"):
             filename += ".wav"
-        with soundfile.SoundFile(filename, "w", samplerate=player.SR, channels=CHANNELS) as wav:
+        with soundfile.SoundFile(os.path.join(path, filename), "w", samplerate=player.SR, channels=CHANNELS) as wav:
             wav.write(self.player.get_track(number))
 
         self.tracks[number].watch_file = filename
@@ -629,13 +630,13 @@ class Screen(FloatLayout):
 
     def autosave(self, _):
         if len(self.player.tracks) > 0:
-            autosaves = glob.glob("autosave.[0-6].looper")
+            autosaves = glob.glob("autosaves/autosave.[0-6].looper")
             autosaves.sort(key=lambda x: int(x.split(".")[1]), reverse=True)
             for f in autosaves:
                 number = int(f.split(".")[1])
                 next_number = number + 1
-                os.rename(f, "autosave.{}.looper".format(next_number))
-            self.save(".", "autosave.0.looper", autosave=True)
+                os.rename(f, "autosaves/autosave.{}.looper".format(next_number))
+            self.save("./autosaves", "autosave.0.looper", autosave=True)
 
 
 
