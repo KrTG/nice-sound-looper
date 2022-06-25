@@ -635,7 +635,7 @@ class Screen(FloatLayout):
             for f in autosaves:
                 number = int(f.split(".")[1])
                 next_number = number + 1
-                os.rename(f, "autosaves/autosave.{}.looper".format(next_number))
+                os.replace(f, "autosaves/autosave.{}.looper".format(next_number))
             self.save("./autosaves", "autosave.0.looper", autosave=True)
 
 
