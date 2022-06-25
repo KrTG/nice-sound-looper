@@ -114,8 +114,6 @@ class Recorder():
         if self.reference_frame:
             track, spect = self._quantize(track, spect)
             track, spect = self._adjust_to_start_time(track, spect)
-        else:
-            return track, spect
 
         return track, spect
 
@@ -186,6 +184,7 @@ class Recorder():
             spect = np.pad(spect, ((0, 0), (0, spect_padding)))
         else:
             track = track[:padding]
+            track = self._attenuate_transition(track)
             spect = spect[:, :spect_padding]
 
 
@@ -201,6 +200,16 @@ class Recorder():
         spect = np.concatenate((spect[:, -spect_adjustment:], spect[:, :-spect_adjustment]), axis=1)
         return track, spect
 
+    def _attenuate_transition(self, track):
+        f = 0.01
+        length = BLOCKSIZE // 2
+        for n in range(len(track) - length, len(track)):
+            track[n] = f * track[n] + (1 - f) * track[n - 1]
+        track[0] = f * track[0] + (1 - f) * track[-1]
+        for n in range(0, length):
+            track[n] = f * track[n] + (1 - f) * track[n - 1]
+
+        return track
 
     def callback(self, indata, frames, time, status):
         try:
