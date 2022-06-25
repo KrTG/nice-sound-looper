@@ -5,6 +5,7 @@
     noise_threshold: noise_threshold
     silence_threshold: silence_threshold
     silence_window: silence_window
+    startpoint_button: startpoint_button
     BoxLayout:
         orientation: 'vertical'
         Button:
@@ -42,6 +43,12 @@
                 Button:
                     text: "Export"
                     on_release: root.show_export()
+            Button:
+                id: startpoint_button
+                size_hint_x: 3
+                text: root.startpoint_button_text
+                background_color: root.startpoint_button_color
+                on_release: root.start_changing_startpoint()
             Button:
                 size_hint_x: 3
                 text: "Reset"

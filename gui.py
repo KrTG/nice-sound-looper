@@ -194,6 +194,9 @@ class Screen(FloatLayout):
     record_button_text = StringProperty("Record")
     record_button_color = ObjectProperty(WHITE)
 
+    startpoint_button_text = StringProperty("Change\nstartpoint")
+    startpoint_button_color = ObjectProperty(WHITE)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.config = None
@@ -202,6 +205,7 @@ class Screen(FloatLayout):
         self.sampling_noise = False
         self.path = None
         self.filename = None
+        self.changing_startpoint = False
         self.recorder = recorder.Recorder(
             start_callback=self.on_recorder_start,
             stop_callback=self.on_recorder_stop
@@ -212,6 +216,18 @@ class Screen(FloatLayout):
         Clock.schedule_interval(self.watch_for_changes, 1)
         Clock.schedule_interval(self.autosave, AUTOSAVE_FREQ)
         self.reset()
+
+    def on_touch_down(self, touch):
+        if self.changing_startpoint and not self.startpoint_button.collide_point(*touch.pos):
+            for track in self.tracks.values():
+                if track.box.collide_point(*touch.pos):
+                    x = (touch.pos[0] - track.box.pos[0]) / track.box.width
+                    self.change_startpoing(x)
+                    break
+            else:
+                self.stop_changing_startpoint()
+
+        super().on_touch_down(touch)
 
     @property
     def tracks_x(self):
@@ -291,6 +307,7 @@ class Screen(FloatLayout):
         self.player.tracks = {}
         self.path = "."
         self.filename = ""
+        self.changing_startpoint = False
 
     def on_press_record(self):
         try:
@@ -313,7 +330,7 @@ class Screen(FloatLayout):
                 self.player.get_reference_progress(exclude=track_number) - self.get_latency_adjustment(),
                 self.get_silence_threshold(),
                 self.get_silence_window(),
-                reference_frame=self.player.get_reference_frame(exclude=track_number)
+                reference_frame=self.player.get_max_frame(exclude=track_number)
             )
 
     def start_playing(self, track_number):
@@ -541,6 +558,35 @@ class Screen(FloatLayout):
 
         self.tracks[number].watch_file = filename
         self.tracks[number].watch_file_last_changed = os.stat(filename).st_mtime
+
+    def start_changing_startpoint(self):
+        if self.changing_startpoint:
+            self.stop_changing_startpoint()
+            return
+        if len(self.player.tracks) == 0:
+            return
+        self.startpoint_button_color = GREEN
+        self.startpoint_button_text = "Click\non the\ntimeline"
+        self.changing_startpoint = True
+
+    def stop_changing_startpoint(self):
+        self.startpoint_button_color = WHITE
+        self.startpoint_button_text = "Change\nstartpoint"
+        self.changing_startpoint = False
+
+    def change_startpoing(self, percent_change):
+        self.startpoint_button_color = WHITE
+        self.startpoint_button_text = "Change\nstartpoint"
+        self.changing_startpoint = False
+
+        # do stuff
+        self.player.change_startpoint(percent_change)
+        for number, track in self.player.tracks.items():
+            track = track.get_track()
+            spectrogram = self.recorder.get_spectrogram(track)
+            self.tracks[number].set_track(track, spectrogram)
+        self.rescale_tracks()
+
 
     def refresh_track(self, number):
         filename = self.tracks[number].watch_file

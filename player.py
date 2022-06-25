@@ -57,12 +57,14 @@ class Player():
         else:
             return max(t.len for t in tracks)
 
-    def get_reference_frame(self, exclude=None):
-        tracks = [t for k, t in self.tracks.items() if k != exclude]
-        if len(tracks) == 0:
-            return None
-        else:
-            return max(t.len for t in tracks)
+    def change_startpoint(self, percent_change):
+        frame = self.get_max_frame()
+        change = int(frame * percent_change)
+        for track in self.tracks.values():
+            adjustment = change % track.len
+            print(adjustment)
+            print(track.track.shape)
+            track.track = np.concatenate((track.track[adjustment:], track.track[:adjustment]))
 
     @property
     def length(self):
