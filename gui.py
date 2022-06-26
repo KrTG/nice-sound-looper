@@ -544,7 +544,8 @@ class Screen(FloatLayout):
         except ValueError:
             print ("Invalid value for 'Minimum length'")
         output = self.player.export(min_length=length)
-        with soundfile.SoundFile(filename, "w", samplerate=player.SR, channels=CHANNELS) as wav:
+        fullpath = os.path.join(path, filename)
+        with soundfile.SoundFile(fullpath, "w", samplerate=player.SR, channels=CHANNELS) as wav:
             wav.write(output)
 
     def export_track(self, number, path, filename):
@@ -554,11 +555,12 @@ class Screen(FloatLayout):
 
         if not filename.endswith(".wav"):
             filename += ".wav"
-        with soundfile.SoundFile(os.path.join(path, filename), "w", samplerate=player.SR, channels=CHANNELS) as wav:
+        fullpath = os.path.join(path, filename)
+        with soundfile.SoundFile(fullpath, "w", samplerate=player.SR, channels=CHANNELS) as wav:
             wav.write(self.player.get_track(number))
 
-        self.tracks[number].watch_file = filename
-        self.tracks[number].watch_file_last_changed = os.stat(filename).st_mtime
+        self.tracks[number].watch_file = fullpath
+        self.tracks[number].watch_file_last_changed = os.stat(fullpath).st_mtime
 
     def start_changing_startpoint(self):
         if self.changing_startpoint:
