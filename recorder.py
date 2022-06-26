@@ -201,12 +201,14 @@ class Recorder():
         return track, spect
 
     def _attenuate_transition(self, track):
-        f = 0.01
-        length = BLOCKSIZE // 2
-        for n in range(len(track) - length, len(track)):
+        f = 0.0
+        length = BLOCKSIZE
+        change = 1 / length
+        half = length // 2
+        for n in range(len(track) - half, len(track)):
+            f += change
             track[n] = f * track[n] + (1 - f) * track[n - 1]
-        track[0] = f * track[0] + (1 - f) * track[-1]
-        for n in range(0, length):
+        for n in range(0, half):
             track[n] = f * track[n] + (1 - f) * track[n - 1]
 
         return track

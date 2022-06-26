@@ -1,7 +1,5 @@
-1. Choose start point for export
-2. Dont render muted parts (allow to mix & match)
+0. fast forward
 
-
-6. loop smooth transition (no click)
+6. loop smooth transition (no click) # monitor if it works
 8. click generator
 9. more dual channel support
