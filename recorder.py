@@ -35,23 +35,26 @@ class Recorder():
         self.stop_callback = stop_callback
         self._state = State.STOPPED
         self.stream = sd.InputStream(callback=self.callback)
+        self.time_index = 0
+        self.rec_index = 0
+        self.start_time = None
 
         self.start_threshold = DEFAULT_START_THRESHOLD
         self.start_window = max(1, int(DEFAULT_START_WINDOW * SR) // BLOCKSIZE)
         self.silence_threshold = DEFAULT_SILENCE_THRESHOLD
         self.silence_window = max(1, int(DEFAULT_SILENCE_WINDOW * SR) // BLOCKSIZE)
-        self.start_time = 0
         self.reference_frame = None
+        self.latency_adjustment = 0
 
         self.time_left = None
 
         self.noise_sample = None
 
-    def _reset(self):
+    def _reset_state(self):
         self.volumes = np.zeros(max(self.start_window, self.silence_window), dtype=np.float32)
         self.buffer = np.zeros([SR * 60, CHANNELS], dtype=np.float32)
-        self.rec_index = 0
         self.time_left = None
+        self.rec_index = 0
 
     @property
     def state(self):
@@ -62,49 +65,58 @@ class Recorder():
         self._state = value
         print ("State changed to: {}".format(value))
 
-    def wait(self, start_time, silence_threshold, silence_window, reference_frame=None):
+    def start(self):
+        self.stream.start()
+
+    def stop(self):
+        self.stream.stop()
+
+    def forward_to(self, x):
+        self.time_index = x
+
+    def wait_for_sound(self, silence_threshold, silence_window, latency_adjustment, reference_frame=None):
         if self.state != State.STOPPED:
             raise RecorderException("Cannot record in state: {}".format(self.state))
+
+        self._reset_state()
 
         self.start_threshold = 0.02
         self.start_window = 10
         self.silence_threshold = silence_threshold
         self.silence_window = max(1, int(silence_window * SR) // BLOCKSIZE)
-        self.start_time = start_time
         self.reference_frame = reference_frame
-
-        self._reset()
+        self.latency_adjustment = latency_adjustment
 
         self.state = State.WAITING
-        if self.stream.stopped:
-            self.stream.start()
 
     def record(self, length):
-        self._reset()
+        if self.state != State.STOPPED:
+            raise RecorderException("Cannot record in state: {}".format(self.state))
+
+        self._reset_state()
+
         self.time_left = length
         self.state = State.RECORDING_INTERVAL
-        if self.stream.stopped:
-            self.stream.start()
 
-    def stop(self):
+    def stop_recording(self):
         self.state = State.STOPPED
         self.stop_callback()
 
     def playback(self):
         if self.state != State.STOPPED:
-            raise RecorderException()("Cannot playback in state: {}".format(self.state))
+            raise RecorderException("Cannot playback in state: {}".format(self.state))
         self.state = State.PLAYING
         sd.play(np.tile(self.buffer[:self.rec_index], (4, 1)))
 
-    def raw(self):
+    def get_raw_data(self):
         if self.state != State.STOPPED:
-            raise RecorderException()("Cannot get recording in state: {}".format(self.state))
+            raise RecorderException("Cannot get recording in state: {}".format(self.state))
         track = self.buffer[:self.rec_index]
         return track
 
-    def postprocess(self, noise_threshold):
+    def get_postprocessed_data(self, noise_threshold):
         if self.state != State.STOPPED:
-            raise RecorderException()("Cannot postprocess in state: {}".format(self.state))
+            raise RecorderException("Cannot postprocess in state: {}".format(self.state))
         # pad recorder sound up to spectrogram hop_length
         if self.rec_index % HOP_LENGTH != 0:
             self.rec_index += (HOP_LENGTH - self.rec_index % HOP_LENGTH)
@@ -192,9 +204,8 @@ class Recorder():
 
         return track, spect
 
-
     def _adjust_to_start_time(self, track, spect):
-        adjustment = self.start_time % track.shape[0]
+        adjustment = (self.start_time - self.latency_adjustment) % track.shape[0]
         spect_adjustment = int(adjustment * spect.shape[1] / track.shape[0])
         track = np.concatenate((track[-adjustment:], track[:-adjustment]))
         spect = np.concatenate((spect[:, -spect_adjustment:], spect[:, :-spect_adjustment]), axis=1)
@@ -215,34 +226,33 @@ class Recorder():
 
     def callback(self, indata, frames, time, status):
         try:
-            if self.state == State.STOPPED:
-                return
-            volume_current = np.average(np.abs(indata))
-            start_window_average = np.average(self.volumes[:self.start_window])
-            silence_window_max = np.max(self.volumes[:self.silence_window])
-            if self.state == State.WAITING:
-                if volume_current - start_window_average > self.start_threshold:
-                    self.state = State.RECORDING
-                    self.start_callback()
-                else:
-                    self.start_time += frames
-            self.volumes = np.roll(self.volumes, 1)
-            self.volumes[0] = volume_current
-            if self.state == State.RECORDING:
-                if (
-                    (silence_window_max < self.silence_threshold and volume_current < self.silence_threshold)
-                    or (self.rec_index + frames > len(self.buffer))
-                ):
-                    self.stop()
-                else:
-                    self.buffer[self.rec_index:self.rec_index+frames] = indata
-                    self.rec_index += frames
-            elif self.state == State.RECORDING_INTERVAL:
-                if self.time_left is not None and self.time_left <= 0:
-                    self.stop()
-                else:
-                    self.buffer[self.rec_index:self.rec_index+frames] = indata
-                    self.rec_index += frames
-                    self.time_left -= frames
+            if self.state != State.STOPPED:
+                volume_current = np.average(np.abs(indata))
+                start_window_average = np.average(self.volumes[:self.start_window])
+                silence_window_max = np.max(self.volumes[:self.silence_window])
+                if self.state == State.WAITING:
+                    if volume_current - start_window_average > self.start_threshold:
+                        self.state = State.RECORDING
+                        self.start_time = self.time_index
+                        self.start_callback()
+                self.volumes = np.roll(self.volumes, 1)
+                self.volumes[0] = volume_current
+                if self.state == State.RECORDING:
+                    if (
+                        (silence_window_max < self.silence_threshold and volume_current < self.silence_threshold)
+                        or (self.rec_index + frames > len(self.buffer))
+                    ):
+                        self.stop_recording()
+                    else:
+                        self.buffer[self.rec_index:self.rec_index+frames] = indata
+                        self.rec_index += frames
+                elif self.state == State.RECORDING_INTERVAL:
+                    if self.time_left is not None and self.time_left <= 0:
+                        self.stop_recording()
+                    else:
+                        self.buffer[self.rec_index:self.rec_index+frames] = indata
+                        self.rec_index += frames
+                        self.time_left -= frames
+            self.time_index += frames
         except Exception as e:
             print (traceback.format_exception(e))

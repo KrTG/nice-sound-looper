@@ -29,8 +29,7 @@ class Player():
     def __init__(self):
         self.tracks = {}
         self.stream = sd.OutputStream(callback=self.callback)
-        self.play_index = 0
-        self._next_chunk_size = 0
+        self.time_index = 0
 
     def get_reference_progress(self, exclude=None):
         tracks = [t for k, t in self.tracks.items() if k != exclude and t.playing]
@@ -98,6 +97,9 @@ class Player():
         except KeyError:
             raise PlayerException("Empty track.")
 
+    def forward_to(self, x):
+        self.time_index = x
+
     def get_track(self, number):
         try:
             return self.tracks[number].get_track()
@@ -134,7 +136,7 @@ class Player():
         chunks = []
         for track in self.tracks.values():
             if track.playing:
-                a = self.play_index % track.len
+                a = self.time_index % track.len
                 b = a + frames
                 chunk = track.track[a:b]
                 chunk = track.volume * chunk
@@ -145,4 +147,4 @@ class Player():
             outdata[:] = sum(chunks)
         else:
             outdata[:] = np.zeros(shape=(frames, CHANNELS))
-        self.play_index += frames
+        self.time_index += frames

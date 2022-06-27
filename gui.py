@@ -213,19 +213,25 @@ class Screen(FloatLayout):
         )
         self.player = player.Player()
         self.player.start()
+        self.recorder.start()
+        self.player.forward_to(0)
+        self.recorder.forward_to(0)
         Clock.schedule_interval(self.update_progress, 0.02)
         Clock.schedule_interval(self.watch_for_changes, 1)
         Clock.schedule_interval(self.autosave, AUTOSAVE_FREQ)
         self.reset()
 
     def on_touch_down(self, touch):
-        if self.changing_startpoint and not self.startpoint_button.collide_point(*touch.pos):
-            for track in self.tracks.values():
-                if track.box.collide_point(*touch.pos):
-                    x = (touch.pos[0] - track.box.pos[0]) / track.box.width
-                    self.change_startpoing(x)
-                    break
-            else:
+        for track in self.tracks.values():
+            if track.box.collide_point(*touch.pos):
+                x = (touch.pos[0] - track.box.pos[0]) / track.box.width
+                if self.changing_startpoint and not self.startpoint_button.collide_point(*touch.pos):
+                    self.change_startpoint(x)
+                else:
+                    self.forward_to(x)
+                break
+        else:
+            if self.changing_startpoint:
                 self.stop_changing_startpoint()
 
         super().on_touch_down(touch)
@@ -321,16 +327,16 @@ class Screen(FloatLayout):
     def start_listening(self, track_number):
         if (len(self.player.tracks) == 0 or
             len(self.player.tracks) == 1 and self.player.tracks.get(track_number)):
-            self.recorder.wait(
-                self.player.get_reference_progress(exclude=track_number) - self.get_latency_adjustment(),
-                self.get_silence_threshold(),
-                self.get_silence_window()
-            )
-        else:
-            self.recorder.wait(
-                self.player.get_reference_progress(exclude=track_number) - self.get_latency_adjustment(),
+            self.recorder.wait_for_sound(
                 self.get_silence_threshold(),
                 self.get_silence_window(),
+                self.get_latency_adjustment()
+            )
+        else:
+            self.recorder.wait_for_sound(
+                self.get_silence_threshold(),
+                self.get_silence_window(),
+                self.get_latency_adjustment(),
                 reference_frame=self.player.get_max_frame(exclude=track_number)
             )
 
@@ -365,7 +371,7 @@ class Screen(FloatLayout):
 
     def postprocess_and_add_track(self, _):
         try:
-            track, spectrogram = self.recorder.postprocess(self.get_noise_threshold())
+            track, spectrogram = self.recorder.get_postprocessed_data(self.get_noise_threshold())
             self.add_track(track, spectrogram)
         except Exception as e:
             print(traceback.format_exception(e))
@@ -385,7 +391,7 @@ class Screen(FloatLayout):
 
     def on_recorder_stop(self):
         if self.sampling_noise:
-            track = self.recorder.raw()
+            track = self.recorder.get_raw_data()
             self.sampling_noise = False
             self.recorder.noise_sample = track
             self.noise_sample_button_color = WHITE
@@ -562,6 +568,11 @@ class Screen(FloatLayout):
         self.tracks[number].watch_file = fullpath
         self.tracks[number].watch_file_last_changed = os.stat(fullpath).st_mtime
 
+    def forward_to(self, percent_progress):
+        x = int(self.player.get_max_frame() * percent_progress)
+        self.player.forward_to(x)
+        self.recorder.forward_to(x)
+
     def start_changing_startpoint(self):
         if self.changing_startpoint:
             self.stop_changing_startpoint()
@@ -577,7 +588,7 @@ class Screen(FloatLayout):
         self.startpoint_button_text = "Change\nstartpoint"
         self.changing_startpoint = False
 
-    def change_startpoing(self, percent_change):
+    def change_startpoint(self, percent_change):
         self.startpoint_button_color = WHITE
         self.startpoint_button_text = "Change\nstartpoint"
         self.changing_startpoint = False
@@ -618,6 +629,7 @@ class Screen(FloatLayout):
         if reference is None:
             reference = 1
         self.progress_bar = self.player.get_max_progress() / reference
+        print(self.recorder.stream.latency)
 
     def watch_for_changes(self, _):
         for track in self.tracks.values():
@@ -640,11 +652,27 @@ class Screen(FloatLayout):
                 os.replace(f, "autosaves/autosave.{}.looper".format(next_number))
             self.save("./autosaves", "autosave.0.looper", autosave=True)
 
+    def cleanup(self):
+        self.player.stop()
+        self.recorder.stop()
 
 
 class LooperApp(App):
+    def __init__(self):
+        super().__init__()
+        self.screen = None
+
     def build(self):
-        return Screen()
+        self.screen = Screen()
+        return self.screen
+
+    def cleanup(self):
+        if self.screen is not None:
+            self.screen.cleanup()
 
 if __name__ == '__main__':
-    LooperApp().run()
+    app = LooperApp()
+    try:
+        app.run()
+    finally:
+        app.cleanup()
