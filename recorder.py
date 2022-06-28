@@ -120,7 +120,6 @@ class Recorder():
         # pad recorder sound up to spectrogram hop_length
         if self.rec_index % HOP_LENGTH != 0:
             self.rec_index += (HOP_LENGTH - self.rec_index % HOP_LENGTH)
-
         track = self._noise_reduce(self.buffer[:self.rec_index], noise_threshold)
         track, spect = self._even_out(track)
         if self.reference_frame:
@@ -197,8 +196,8 @@ class Recorder():
         else:
             track = track[:padding]
             track = self._attenuate_transition(track)
-            spect = spect[:, :spect_padding]
-
+            if spect_padding > 0:
+                spect = spect[:, :spect_padding]
 
         assert(track.shape[0] == quant)
 
