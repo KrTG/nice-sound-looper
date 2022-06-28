@@ -1,7 +1,6 @@
 <Screen>:
     export_length: export_length
     trackLayout: trackLayout
-    latency_adjustment: latency_adjustment
     noise_threshold: noise_threshold
     silence_threshold: silence_threshold
     silence_window: silence_window
@@ -59,14 +58,6 @@
                 BoxLayout:
                     size_hint_y: 4
                     orientation: 'horizontal'
-                    BoxLayout:
-                        size_hint_x:2
-                        orientation: 'vertical'
-                        Label:
-                            text: "latency adjustment"
-                        TextInput:
-                            id: latency_adjustment
-                            text: "0"
                     BoxLayout:
                         size_hint_x:2
                         orientation: 'vertical'

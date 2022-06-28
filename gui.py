@@ -184,7 +184,6 @@ Repeats: {repeats}
 
 class Screen(FloatLayout):
     trackLayout = ObjectProperty(None)
-    latency_adjustment = ObjectProperty(None)
     export_length = ObjectProperty(None)
     noise_threshold = ObjectProperty(None)
     silence_threshold = ObjectProperty(None)
@@ -251,11 +250,7 @@ class Screen(FloatLayout):
             return 0
 
     def get_latency_adjustment(self):
-        try:
-            return int(self.latency_adjustment.text)
-        except ValueError:
-            print("Latency adjustment not an integer")
-            return DEFAULT_LATENCY_ADJUSTMENT
+        return int((self.player.stream.latency + self.recorder.stream.latency) * SR)
 
     def get_noise_threshold(self):
         try:
@@ -284,19 +279,16 @@ class Screen(FloatLayout):
                 self.config = json.load(config)
             except:
                 self.config = {}
-        self.config.setdefault("latency_adjustment", DEFAULT_LATENCY_ADJUSTMENT)
         self.config.setdefault("noise_threshold", DEFAULT_NOISE_THRESHOLD)
         self.config.setdefault("silence_threshold", DEFAULT_SILENCE_THRESHOLD)
         self.config.setdefault("silence_window", DEFAULT_SILENCE_WINDOW)
 
-        self.latency_adjustment.text = str(self.config["latency_adjustment"])
         self.noise_threshold.text = str(self.config["noise_threshold"])
         self.silence_threshold.text = str(self.config["silence_threshold"])
         self.silence_window.text = str(self.config["silence_window"])
 
 
     def save_config(self):
-        self.config["latency_adjustment"] = self.get_latency_adjustment()
         self.config["noise_threshold"] = self.get_noise_threshold()
         self.config["silence_threshold"] = self.get_silence_threshold()
         self.config["silence_window"] = self.get_silence_window()
@@ -629,7 +621,6 @@ class Screen(FloatLayout):
         if reference is None:
             reference = 1
         self.progress_bar = self.player.get_max_progress() / reference
-        print(self.recorder.stream.latency)
 
     def watch_for_changes(self, _):
         for track in self.tracks.values():
