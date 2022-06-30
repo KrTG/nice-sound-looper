@@ -191,9 +191,15 @@ class Recorder():
         padding = quant - track.shape[0]
         spect_padding = int((padding / track.shape[0]) * spect.shape[1])
         if (padding >= 0):
+            print("Track got padded with {x:.2}s of silence to fit the other tracks".format(
+                padding / SR
+            ))
             track = np.pad(track, ((0, padding), (0, 0)))
             spect = np.pad(spect, ((0, 0), (0, spect_padding)))
         else:
+            print("Track got cut by {x:.2}s to fit the other tracks".format(
+                -padding / SR
+            ))
             track = track[:padding]
             track = self._attenuate_transition(track)
             if spect_padding > 0:
@@ -211,14 +217,17 @@ class Recorder():
         return track, spect
 
     def _attenuate_transition(self, track):
-        f = 0.0
-        length = BLOCKSIZE
-        change = 1 / length
+        length = BLOCKSIZE * 2
         half = length // 2
+        change = 1 / half
+
+        f = 1.0
         for n in range(len(track) - half, len(track)):
-            f += change
+            f -= change
             track[n] = f * track[n] + (1 - f) * track[n - 1]
+        f = 0.0
         for n in range(0, half):
+            f += change
             track[n] = f * track[n] + (1 - f) * track[n - 1]
 
         return track
