@@ -121,12 +121,16 @@ class Recorder():
         if self.rec_index % HOP_LENGTH != 0:
             self.rec_index += (HOP_LENGTH - self.rec_index % HOP_LENGTH)
         track = self._noise_reduce(self.buffer[:self.rec_index], noise_threshold)
-        track, spect = self._even_out(track)
         if self.reference_frame:
-            track, spect = self._quantize(track, spect)
-            track, spect = self._adjust_to_start_time(track, spect)
+            track = self._quantize(track)
+            track = self._attenuate_transition(track)
+            track = self._adjust_to_start_time(track)
+        else:
+            track = self._even_out(track)
+            track = self._attenuate_transition(track)
 
-        return track, spect
+
+        return track
 
     def get_spectrogram(self, track):
         track = librosa.feature.melspectrogram(y=track[:, 0], sr=SR, n_mels=128, fmax=10000, hop_length=HOP_LENGTH)
@@ -160,7 +164,7 @@ class Recorder():
             adjustment = spect.shape[1] / cut.shape[1]
             adjusted_values.append(avg * adjustment)
         if len(adjusted_values) == 0:
-            return track, spect
+            return track
         adjusted_values = np.array(adjusted_values)
         argmin = np.argmin(adjusted_values)
         cut_amount = _range[argmin]
@@ -176,11 +180,11 @@ class Recorder():
         plt.savefig("prep.png")
 
         if cut_amount >= spect.shape[1]:
-            return track, spect
+            return track
         else:
-            return track[:-cut_samples], spect[:, :-cut_amount]
+            return track[:-cut_samples]
 
-    def _quantize(self, track, spect):
+    def _quantize(self, track):
         quant = self.reference_frame
         if track.shape[0] > self.reference_frame:
             while track.shape[0] > quant + self.reference_frame * 0.5:
@@ -189,32 +193,23 @@ class Recorder():
             while track.shape[0] <= 1.5 * (quant // 2):
                 quant //= 2
         padding = quant - track.shape[0]
-        spect_padding = int((padding / track.shape[0]) * spect.shape[1])
         if (padding >= 0):
             print("Track got padded with {x:.2}s of silence to fit the other tracks".format(
-                padding / SR
+                x=padding / SR
             ))
             track = np.pad(track, ((0, padding), (0, 0)))
-            spect = np.pad(spect, ((0, 0), (0, spect_padding)))
         else:
             print("Track got cut by {x:.2}s to fit the other tracks".format(
-                -padding / SR
+                x=-padding / SR
             ))
             track = track[:padding]
-            track = self._attenuate_transition(track)
-            if spect_padding > 0:
-                spect = spect[:, :spect_padding]
 
-        assert(track.shape[0] == quant)
+        return track
 
-        return track, spect
-
-    def _adjust_to_start_time(self, track, spect):
+    def _adjust_to_start_time(self, track):
         adjustment = (self.start_time - self.latency_adjustment) % track.shape[0]
-        spect_adjustment = int(adjustment * spect.shape[1] / track.shape[0])
         track = np.concatenate((track[-adjustment:], track[:-adjustment]))
-        spect = np.concatenate((spect[:, -spect_adjustment:], spect[:, :-spect_adjustment]), axis=1)
-        return track, spect
+        return track
 
     def _attenuate_transition(self, track):
         length = BLOCKSIZE * 2

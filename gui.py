@@ -363,7 +363,8 @@ class Screen(FloatLayout):
 
     def postprocess_and_add_track(self, _):
         try:
-            track, spectrogram = self.recorder.get_postprocessed_data(self.get_noise_threshold())
+            track = self.recorder.get_postprocessed_data(self.get_noise_threshold())
+            spectrogram = self.recorder.get_spectrogram(track)
             self.add_track(track, spectrogram)
         except Exception as e:
             print(traceback.format_exception(e))
