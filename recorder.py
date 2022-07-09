@@ -52,7 +52,10 @@ class Recorder():
 
     def _reset_state(self):
         self.volumes = np.zeros(max(self.start_window, self.silence_window), dtype=np.float32)
-        self.buffer = np.zeros([SR * 60, CHANNELS], dtype=np.float32)
+        self.buffer = np.zeros(
+            [SR * RECORDER_BUFFER, CHANNELS],
+            dtype=np.float32
+        )
         self.time_left = None
         self.rec_index = 0
 
@@ -120,7 +123,8 @@ class Recorder():
         # pad recorder sound up to spectrogram hop_length
         if self.rec_index % HOP_LENGTH != 0:
             self.rec_index += (HOP_LENGTH - self.rec_index % HOP_LENGTH)
-        track = self._noise_reduce(self.buffer[:self.rec_index], noise_threshold)
+        track = np.copy(self.buffer[:self.rec_index])
+        track = self._noise_reduce(track, noise_threshold)
         if self.reference_frame:
             track = self._quantize(track)
             track = self._attenuate_transition(track)
