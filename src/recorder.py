@@ -3,24 +3,26 @@ import traceback
 
 import librosa
 import librosa.display
+import matplotlib.pyplot as plt
 import noisereduce
 import numpy as np
-import matplotlib.pyplot as plt
 import sounddevice as sd
 
 from src.const import *
-
 
 sd.default.samplerate = SR
 sd.default.channels = CHANNELS
 sd.default.blocksize = BLOCKSIZE
 
+
 def movingaverage(interval, window_size):
-    window = np.ones(int(window_size))/float(window_size)
-    return np.convolve(interval, window, 'same')
+    window = np.ones(int(window_size)) / float(window_size)
+    return np.convolve(interval, window, "same")
+
 
 class RecorderException(Exception):
     pass
+
 
 class State(enum.Enum):
     STOPPED = 0
@@ -29,14 +31,14 @@ class State(enum.Enum):
     RECORDING_INTERVAL = 3
     PLAYING = 4
 
-class Recorder():
+
+class Recorder:
     def __init__(self, start_callback=lambda: None, stop_callback=lambda: None):
         self.start_callback = start_callback
         self.stop_callback = stop_callback
         self._state = State.STOPPED
         self.stream = sd.InputStream(callback=self.callback)
         self.time_index = 0
-        self.rec_index = 0
         self.start_time = None
 
         self.start_threshold = DEFAULT_START_THRESHOLD
@@ -46,16 +48,19 @@ class Recorder():
         self.reference_frame = None
         self.latency_adjustment = 0
 
-        self.time_left = None
-
         self.noise_sample = None
 
+        self.volumes = None
+        self.buffer = None
+        self.time_left = None
+        self.rec_index = None
+        self._reset_state()
+
     def _reset_state(self):
-        self.volumes = np.zeros(max(self.start_window, self.silence_window), dtype=np.float32)
-        self.buffer = np.zeros(
-            [SR * RECORDER_BUFFER, CHANNELS],
-            dtype=np.float32
+        self.volumes = np.zeros(
+            max(self.start_window, self.silence_window), dtype=np.float32
         )
+        self.buffer = np.zeros([SR * RECORDER_BUFFER, CHANNELS], dtype=np.float32)
         self.time_left = None
         self.rec_index = 0
 
@@ -66,7 +71,7 @@ class Recorder():
     @state.setter
     def state(self, value):
         self._state = value
-        print ("State changed to: {}".format(value))
+        print("State changed to: {}".format(value))
 
     def start(self):
         self.stream.start()
@@ -77,7 +82,13 @@ class Recorder():
     def forward_to(self, x):
         self.time_index = x
 
-    def wait_for_sound(self, silence_threshold, silence_window, latency_adjustment, reference_frame=None):
+    def wait_for_sound(
+        self,
+        silence_threshold,
+        silence_window,
+        latency_adjustment,
+        reference_frame=None,
+    ):
         if self.state != State.STOPPED:
             raise RecorderException("Cannot record in state: {}".format(self.state))
 
@@ -109,21 +120,25 @@ class Recorder():
         if self.state != State.STOPPED:
             raise RecorderException("Cannot playback in state: {}".format(self.state))
         self.state = State.PLAYING
-        sd.play(np.tile(self.buffer[:self.rec_index], (4, 1)))
+        sd.play(np.tile(self.buffer[: self.rec_index], (4, 1)))
 
     def get_raw_data(self):
         if self.state != State.STOPPED:
-            raise RecorderException("Cannot get recording in state: {}".format(self.state))
-        track = self.buffer[:self.rec_index]
+            raise RecorderException(
+                "Cannot get recording in state: {}".format(self.state)
+            )
+        track = self.buffer[: self.rec_index]
         return track
 
     def get_postprocessed_data(self, noise_threshold):
         if self.state != State.STOPPED:
-            raise RecorderException("Cannot postprocess in state: {}".format(self.state))
+            raise RecorderException(
+                "Cannot postprocess in state: {}".format(self.state)
+            )
         # pad recorder sound up to spectrogram hop_length
         if self.rec_index % HOP_LENGTH != 0:
-            self.rec_index += (HOP_LENGTH - self.rec_index % HOP_LENGTH)
-        track = np.copy(self.buffer[:self.rec_index])
+            self.rec_index += HOP_LENGTH - self.rec_index % HOP_LENGTH
+        track = np.copy(self.buffer[: self.rec_index])
         if noise_threshold > 0.01:
             track = self._noise_reduce(track, noise_threshold)
         if self.reference_frame:
@@ -134,11 +149,12 @@ class Recorder():
             track = self._even_out(track)
             track = self._attenuate_transition(track)
 
-
         return track
 
     def get_spectrogram(self, track):
-        track = librosa.feature.melspectrogram(y=track[:, 0], sr=SR, n_mels=128, fmax=10000, hop_length=HOP_LENGTH)
+        track = librosa.feature.melspectrogram(
+            y=track[:, 0], sr=SR, n_mels=128, fmax=10000, hop_length=HOP_LENGTH
+        )
         return track
 
     def _noise_reduce(self, track, noise_threshold):
@@ -147,7 +163,9 @@ class Recorder():
             sr=SR,
             stationary=True,
             n_std_thresh_stationary=noise_threshold,
-            y_noise=None if self.noise_sample is None else np.swapaxes(self.noise_sample, 0, 1)
+            y_noise=None
+            if self.noise_sample is None
+            else np.swapaxes(self.noise_sample, 0, 1),
         )
         track = np.swapaxes(track, 0, 1)
         return track
@@ -156,7 +174,9 @@ class Recorder():
         spect = self.get_spectrogram(track)
         values = []
         adjusted_values = []
-        _range = np.array(range(40 if spect.shape[1] % 2 == 0 else 41, min(400, spect.shape[1]), 2))
+        _range = np.array(
+            range(40 if spect.shape[1] % 2 == 0 else 41, min(400, spect.shape[1]), 2)
+        )
         for i in _range:
             cut = spect[:, :-i]
             if cut.shape[1] < 8:
@@ -165,7 +185,7 @@ class Recorder():
             diff = np.abs(split2 - split1)
             avg = np.average(diff)
             values.append(avg)
-            #adjusted_values.append(avg / np.log(cut.shape[1]))
+            # adjusted_values.append(avg / np.log(cut.shape[1]))
             adjustment = spect.shape[1] / cut.shape[1]
             adjusted_values.append(avg * adjustment)
         if len(adjusted_values) == 0:
@@ -178,9 +198,13 @@ class Recorder():
 
         times = _range * HOP_LENGTH / SR
 
-        fig, ax = plt.subplots()
-        plt.plot(times[:len(values)], values / max(values), label="values")
-        plt.plot(times[:len(adjusted_values)], adjusted_values / max(adjusted_values), label="adjusted values")
+        # plt.subplots()
+        plt.plot(times[: len(values)], values / max(values), label="values")
+        plt.plot(
+            times[: len(adjusted_values)],
+            adjusted_values / max(adjusted_values),
+            label="adjusted values",
+        )
         plt.legend()
         plt.savefig("prep.png")
 
@@ -198,15 +222,19 @@ class Recorder():
             while track.shape[0] <= 1.5 * (quant // 2):
                 quant //= 2
         padding = quant - track.shape[0]
-        if (padding >= 0):
-            print("Track got padded with {x:.2}s of silence to fit the other tracks".format(
-                x=padding / SR
-            ))
+        if padding >= 0:
+            print(
+                "Track got padded with {x:.2}s of silence to fit the other tracks".format(
+                    x=padding / SR
+                )
+            )
             track = np.pad(track, ((0, padding), (0, 0)))
         else:
-            print("Track got cut by {x:.2}s to fit the other tracks".format(
-                x=-padding / SR
-            ))
+            print(
+                "Track got cut by {x:.2}s to fit the other tracks".format(
+                    x=-padding / SR
+                )
+            )
             track = track[:padding]
 
         return track
@@ -232,12 +260,12 @@ class Recorder():
 
         return track
 
-    def callback(self, indata, frames, time, status):
+    def callback(self, indata, frames, _time, _status):
         try:
             if self.state != State.STOPPED:
                 volume_current = np.average(np.abs(indata))
-                start_window_average = np.average(self.volumes[:self.start_window])
-                silence_window_max = np.max(self.volumes[:self.silence_window])
+                start_window_average = np.average(self.volumes[: self.start_window])
+                silence_window_max = np.max(self.volumes[: self.silence_window])
                 if self.state == State.WAITING:
                     if volume_current - start_window_average > self.start_threshold:
                         self.state = State.RECORDING
@@ -247,20 +275,20 @@ class Recorder():
                 self.volumes[0] = volume_current
                 if self.state == State.RECORDING:
                     if (
-                        (silence_window_max < self.silence_threshold and volume_current < self.silence_threshold)
-                        or (self.rec_index + frames > len(self.buffer))
-                    ):
+                        silence_window_max < self.silence_threshold
+                        and volume_current < self.silence_threshold
+                    ) or (self.rec_index + frames > len(self.buffer)):
                         self.stop_recording()
                     else:
-                        self.buffer[self.rec_index:self.rec_index+frames] = indata
+                        self.buffer[self.rec_index : self.rec_index + frames] = indata
                         self.rec_index += frames
                 elif self.state == State.RECORDING_INTERVAL:
                     if self.time_left is not None and self.time_left <= 0:
                         self.stop_recording()
                     else:
-                        self.buffer[self.rec_index:self.rec_index+frames] = indata
+                        self.buffer[self.rec_index : self.rec_index + frames] = indata
                         self.rec_index += frames
                         self.time_left -= frames
             self.time_index += frames
         except Exception as e:
-            print (traceback.format_exception(e))
+            print(traceback.format_exception(e))

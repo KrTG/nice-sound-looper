@@ -1,18 +1,18 @@
-import librosa
 import numpy as np
 import sounddevice as sd
 
 from src.const import *
 
-
 sd.default.samplerate = SR
 sd.default.channels = CHANNELS
 sd.default.blocksize = BLOCKSIZE
 
+
 class PlayerException(Exception):
     pass
 
-class Track():
+
+class Track:
     # Track is doubled for easy looping
     def __init__(self, track):
         self.len = track.shape[0]
@@ -23,9 +23,10 @@ class Track():
         self.frames = 0
 
     def get_track(self):
-        return self.track[:self.len]
+        return self.track[: self.len]
 
-class Player():
+
+class Player:
     def __init__(self):
         self.tracks = {}
         self.stream = sd.OutputStream(callback=self.callback)
@@ -61,7 +62,9 @@ class Player():
         change = int(frame * percent_change)
         for track in self.tracks.values():
             adjustment = change % track.len
-            track.track = np.concatenate((track.track[adjustment:], track.track[:adjustment]))
+            track.track = np.concatenate(
+                (track.track[adjustment:], track.track[:adjustment])
+            )
 
     @property
     def length(self):
@@ -76,8 +79,8 @@ class Player():
     def remove_track(self, n):
         try:
             del self.tracks[n]
-        except KeyError:
-            raise PlayerException("Cannot remove empty track.")
+        except KeyError as e:
+            raise PlayerException("Cannot remove empty track.") from e
 
     def start(self):
         self.stream.start()
@@ -88,14 +91,14 @@ class Player():
     def play(self, n):
         try:
             self.tracks[n].playing = True
-        except KeyError:
-            raise PlayerException("Empty track cannot play.")
+        except KeyError as e:
+            raise PlayerException("Empty track cannot play.") from e
 
     def pause(self, n):
         try:
             self.tracks[n].playing = False
-        except KeyError:
-            raise PlayerException("Empty track.")
+        except KeyError as e:
+            raise PlayerException("Empty track.") from e
 
     def forward_to(self, x):
         self.time_index = x
@@ -103,8 +106,8 @@ class Player():
     def get_track(self, number):
         try:
             return self.tracks[number].get_track()
-        except KeyError:
-            raise PlayerException("Empty track.")
+        except KeyError as e:
+            raise PlayerException("Empty track.") from e
 
     def export(self, min_length):
         length = (1 + min_length * SR // self.length) * self.length
@@ -132,7 +135,7 @@ class Player():
             progress += frames
         return output
 
-    def callback(self, outdata, frames, time, status):
+    def callback(self, outdata, frames, _time, _status):
         chunks = []
         for track in self.tracks.values():
             if track.playing:

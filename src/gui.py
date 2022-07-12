@@ -8,58 +8,52 @@ import cv2
 import librosa
 import numpy as np
 import soundfile
-
 from kivy.app import App
-from kivy.config import Config
 from kivy.clock import Clock
+from kivy.config import Config
 from kivy.core.window import Window
-from kivy.graphics import Rectangle
 from kivy.graphics.texture import Texture
-from kivy.properties import NumericProperty
-from kivy.properties import ObjectProperty
-from kivy.properties import StringProperty
-from kivy.uix.behaviors import FocusBehavior
+from kivy.properties import NumericProperty, ObjectProperty, StringProperty
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.popup import Popup
-from kivy.uix.slider import Slider
 
-from src import player
-from src import recorder
-from src.gui_lib import StretchImage
+from src import player, recorder
 from src.const import *
 
-Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
+Config.set("input", "mouse", "mouse,multitouch_on_demand")
 Window.size = WINDOW_SIZE
+
 
 def to_texture(image):
     image = cv2.flip(image, 0)
     im_bytes = np.reshape(image, [-1])
     out_texture = Texture.create(size=(image.shape[1], image.shape[0]))
-    out_texture.blit_buffer(im_bytes, colorfmt='bgr', bufferfmt='ubyte')
-    #cv2.imshow("test", image)
-    #cv2.waitKey(0)
-    #cv2.destroyAllWindows()
+    out_texture.blit_buffer(im_bytes, colorfmt="bgr", bufferfmt="ubyte")
 
     return out_texture
+
 
 class CustomLabel(Label):
     pass
 
+
 class VolumeSlider(BoxLayout):
     slider = ObjectProperty(None)
+
     def get(self):
         return 2 * self.slider.value / 100
 
     def set(self, value):
         self.slider.value = int(value * 100 / 2)
 
+
 class LoadDialog(FloatLayout):
     load = ObjectProperty(None)
     cancel = ObjectProperty(None)
     extension = ObjectProperty(None)
+
 
 class SaveDialog(FloatLayout):
     cancel = ObjectProperty(None)
@@ -67,6 +61,7 @@ class SaveDialog(FloatLayout):
     filename = ObjectProperty("")
     path = StringProperty("")
     save = ObjectProperty(None)
+
 
 class Track(BoxLayout):
     info_text = StringProperty("Info: ")
@@ -128,7 +123,7 @@ class Track(BoxLayout):
         self.screen.reset_track(self.number)
 
     def generate_info(self):
-        template ="""Length: {length}
+        template = """Length: {length}
 Samples: {samples}
 Repeats: {repeats}
 """
@@ -136,7 +131,6 @@ Repeats: {repeats}
 
     def set_track(self, track, spectrogram):
         length = "{:.2f}".format(len(track) / recorder.SR)
-        s_length = "{}".format(spectrogram.shape[1])
         self.info["samples"] = len(track)
         self.info["length"] = length
         self.generate_info()
@@ -164,8 +158,9 @@ Repeats: {repeats}
         self.playing = False
 
     def set_scale(self, max_length):
-        divisor = self.track_length
-        repeats = round(max(0, max_length / self.track_length)) # small adjustment in case this is not a perfect division
+        repeats = round(
+            max(0, max_length / self.track_length)
+        )  # small adjustment in case this is not a perfect division
 
         repeated_texture = np.tile(self.np_texture, repeats)
         texture = np.expand_dims(repeated_texture, axis=2)
@@ -205,10 +200,10 @@ class Screen(FloatLayout):
         self.sampling_noise = False
         self.path = None
         self.filename = None
+        self._popup = None
         self.changing_startpoint = False
         self.recorder = recorder.Recorder(
-            start_callback=self.on_recorder_start,
-            stop_callback=self.on_recorder_stop
+            start_callback=self.on_recorder_start, stop_callback=self.on_recorder_stop
         )
         self.player = player.Player()
         self.player.start()
@@ -224,7 +219,10 @@ class Screen(FloatLayout):
         for track in self.tracks.values():
             if track.box.collide_point(*touch.pos):
                 x = (touch.pos[0] - track.box.pos[0]) / track.box.width
-                if self.changing_startpoint and not self.startpoint_button.collide_point(*touch.pos):
+                if (
+                    self.changing_startpoint
+                    and not self.startpoint_button.collide_point(*touch.pos)
+                ):
                     self.change_startpoint(x)
                 else:
                     self.forward_to(x)
@@ -239,7 +237,7 @@ class Screen(FloatLayout):
     def tracks_x(self):
         try:
             return list(self.tracks.values())[0].box.x
-        except (IndexError, AttributeError)  as e:
+        except (IndexError, AttributeError):
             return 0
 
     @property
@@ -277,7 +275,7 @@ class Screen(FloatLayout):
         with open("config.json") as config:
             try:
                 self.config = json.load(config)
-            except:
+            except (ValueError, OSError):
                 self.config = {}
         self.config.setdefault("noise_threshold", DEFAULT_NOISE_THRESHOLD)
         self.config.setdefault("silence_threshold", DEFAULT_SILENCE_THRESHOLD)
@@ -286,7 +284,6 @@ class Screen(FloatLayout):
         self.noise_threshold.text = str(self.config["noise_threshold"])
         self.silence_threshold.text = str(self.config["silence_threshold"])
         self.silence_window.text = str(self.config["silence_window"])
-
 
     def save_config(self):
         self.config["noise_threshold"] = self.get_noise_threshold()
@@ -317,19 +314,22 @@ class Screen(FloatLayout):
             print(str(e))
 
     def start_listening(self, track_number):
-        if (len(self.player.tracks) == 0 or
-            len(self.player.tracks) == 1 and self.player.tracks.get(track_number)):
+        if (
+            len(self.player.tracks) == 0
+            or len(self.player.tracks) == 1
+            and self.player.tracks.get(track_number)
+        ):
             self.recorder.wait_for_sound(
                 self.get_silence_threshold(),
                 self.get_silence_window(),
-                self.get_latency_adjustment()
+                self.get_latency_adjustment(),
             )
         else:
             self.recorder.wait_for_sound(
                 self.get_silence_threshold(),
                 self.get_silence_window(),
                 self.get_latency_adjustment(),
-                reference_frame=self.player.get_max_frame(exclude=track_number)
+                reference_frame=self.player.get_max_frame(exclude=track_number),
             )
 
     def start_playing(self, track_number):
@@ -398,42 +398,65 @@ class Screen(FloatLayout):
 
     def show_save(self):
         content = SaveDialog(
-            save=self.save, cancel=self.dismiss_popup, extension=".looper",
-            filename=self.filename, path=self.path
+            save=self.save,
+            cancel=self.dismiss_popup,
+            extension=".looper",
+            filename=self.filename,
+            path=self.path,
         )
         self._popup = Popup(
-            title="Save file", content=content, size_hint=(0.9, 0.8), pos_hint={'y': 0.2},
-            auto_dismiss=False
+            title="Save file",
+            content=content,
+            size_hint=(0.9, 0.8),
+            pos_hint={"y": 0.2},
+            auto_dismiss=False,
         )
         self._popup.open()
 
     def show_load(self):
-        content = LoadDialog(load=self.load, cancel=self.dismiss_popup, extension=".looper")
+        content = LoadDialog(
+            load=self.load, cancel=self.dismiss_popup, extension=".looper"
+        )
         self._popup = Popup(
-            title="Load file", content=content, size_hint=(0.9, 0.8), pos_hint={'y': 0.2},
-            auto_dismiss=False
+            title="Load file",
+            content=content,
+            size_hint=(0.9, 0.8),
+            pos_hint={"y": 0.2},
+            auto_dismiss=False,
         )
         self._popup.open()
 
     def show_export(self):
         content = SaveDialog(
-            save=self.export, cancel=self.dismiss_popup, extension=".wav",
-            filename="", path="."
+            save=self.export,
+            cancel=self.dismiss_popup,
+            extension=".wav",
+            filename="",
+            path=".",
         )
         self._popup = Popup(
-            title="Export file", content=content, size_hint=(0.9, 0.8), pos_hint={'y': 0.2},
-            auto_dismiss=False
+            title="Export file",
+            content=content,
+            size_hint=(0.9, 0.8),
+            pos_hint={"y": 0.2},
+            auto_dismiss=False,
         )
         self._popup.open()
 
     def show_export_track(self, number):
         content = SaveDialog(
-            save=lambda p, f: self.export_track(number, p, f), cancel=self.dismiss_popup, extension=".wav",
-            filename="", path="."
+            save=lambda p, f: self.export_track(number, p, f),
+            cancel=self.dismiss_popup,
+            extension=".wav",
+            filename="",
+            path=".",
         )
         self._popup = Popup(
-            title="Export single track as .wav", content=content, size_hint=(0.9, 0.8), pos_hint={'y': 0.2},
-            auto_dismiss=False
+            title="Export single track as .wav",
+            content=content,
+            size_hint=(0.9, 0.8),
+            pos_hint={"y": 0.2},
+            auto_dismiss=False,
         )
         self._popup.open()
 
@@ -454,14 +477,24 @@ class Screen(FloatLayout):
             if self.recorder.noise_sample is not None:
                 name = "sv_noise"
                 with open(name, "wb") as savefile:
-                    np.save(savefile, self.recorder.noise_sample, allow_pickle=False, fix_imports=False)
+                    np.save(
+                        savefile,
+                        self.recorder.noise_sample,
+                        allow_pickle=False,
+                        fix_imports=False,
+                    )
                     zippy.write(name)
                 os.remove(name)
 
             for number, track in self.player.tracks.items():
                 name = "sv_{}".format(number)
                 with open(name, "wb") as savefile:
-                    np.save(savefile, track.track[:track.len], allow_pickle=False, fix_imports=False)
+                    np.save(
+                        savefile,
+                        track.track[: track.len],
+                        allow_pickle=False,
+                        fix_imports=False,
+                    )
                 zippy.write(name)
                 os.remove(name)
 
@@ -490,7 +523,7 @@ class Screen(FloatLayout):
             tracks = zippy.namelist()
             if "sv_noise" in tracks:
                 with zippy.open("sv_noise", "r") as noise_file:
-                    noise_sample = np.load(noise_file)[:,:CHANNELS]
+                    noise_sample = np.load(noise_file)[:, :CHANNELS]
                     self.recorder.noise_sample = noise_sample
                 tracks.remove("sv_noise")
 
@@ -500,9 +533,11 @@ class Screen(FloatLayout):
                 if track_save.endswith(".volume"):
                     continue
                 with zippy.open(track_save, "r") as track_file:
-                    track = np.load(track_file)[:,:CHANNELS]
+                    track = np.load(track_file)[:, :CHANNELS]
                     number = int(track_save.split("_")[1])
-                    self.add_track(track, self.recorder.get_spectrogram(track), number=number)
+                    self.add_track(
+                        track, self.recorder.get_spectrogram(track), number=number
+                    )
                     tracks.remove(track_save)
 
             for track_playing in tracks[:]:
@@ -521,7 +556,7 @@ class Screen(FloatLayout):
                     tracks.remove(track_playing)
 
             for track_volume in tracks[:]:
-                if not track_playing.endswith(".volume"):
+                if not track_volume.endswith(".volume"):
                     continue
                 with zippy.open(track_volume, "r") as track_file:
                     content = track_file.read()
@@ -541,10 +576,12 @@ class Screen(FloatLayout):
         try:
             length = int(self.export_length.text)
         except ValueError:
-            print ("Invalid value for 'Minimum length'")
+            print("Invalid value for 'Minimum length'")
         output = self.player.export(min_length=length)
         fullpath = os.path.join(path, filename)
-        with soundfile.SoundFile(fullpath, "w", samplerate=player.SR, channels=CHANNELS) as wav:
+        with soundfile.SoundFile(
+            fullpath, "w", samplerate=player.SR, channels=CHANNELS
+        ) as wav:
             wav.write(output)
 
     def export_track(self, number, path, filename):
@@ -555,7 +592,9 @@ class Screen(FloatLayout):
         if not filename.endswith(".wav"):
             filename += ".wav"
         fullpath = os.path.join(path, filename)
-        with soundfile.SoundFile(fullpath, "w", samplerate=player.SR, channels=CHANNELS) as wav:
+        with soundfile.SoundFile(
+            fullpath, "w", samplerate=player.SR, channels=CHANNELS
+        ) as wav:
             wav.write(self.player.get_track(number))
 
         self.tracks[number].watch_file = fullpath
@@ -594,21 +633,22 @@ class Screen(FloatLayout):
             self.tracks[number].set_track(track, spectrogram)
         self.rescale_tracks()
 
-
     def refresh_track(self, number):
         filename = self.tracks[number].watch_file
         if filename is None:
             return
         with soundfile.SoundFile(filename, "r") as wav:
-            new_track = wav.read(always_2d=True)[:,:CHANNELS]
+            new_track = wav.read(always_2d=True)[:, :CHANNELS]
             if new_track.shape[0] == 0:
                 raise RuntimeError("Read error.")
             padding = self.player.tracks[number].len - new_track.shape[0]
             if padding > 0:
                 mean_value = (new_track[0] + new_track[-1]) / 2
-                new_track = np.pad(new_track, ((0, padding), (0, 0)), constant_values=mean_value)
+                new_track = np.pad(
+                    new_track, ((0, padding), (0, 0)), constant_values=mean_value
+                )
             else:
-                new_track = new_track[:self.player.tracks[number].len]
+                new_track = new_track[: self.player.tracks[number].len]
 
         new_spectrogram = self.recorder.get_spectrogram(new_track)
         self.player.add_track(number, new_track)
