@@ -198,7 +198,7 @@ class Recorder:
 
         times = _range * HOP_LENGTH / SR
 
-        # plt.subplots()
+        plt.subplots()
         plt.plot(times[: len(values)], values / max(values), label="values")
         plt.plot(
             times[: len(adjusted_values)],
