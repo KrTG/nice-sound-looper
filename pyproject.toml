@@ -6,7 +6,6 @@ authors = ["Krzysztof Bodora <krzysztof.bodora@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "3.10"
-opencv-python = "^4.6.0"
 Kivy = "^2.1.0"
 llvmlite = "^0.38.1"
 numba = "^0.55.2"

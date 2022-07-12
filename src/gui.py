@@ -4,7 +4,6 @@ import os
 import traceback
 import zipfile
 
-import cv2
 import librosa
 import numpy as np
 import soundfile
@@ -27,7 +26,7 @@ Window.size = WINDOW_SIZE
 
 
 def to_texture(image):
-    image = cv2.flip(image, 0)
+    image = np.flip(image, 0)
     im_bytes = np.reshape(image, [-1])
     out_texture = Texture.create(size=(image.shape[1], image.shape[0]))
     out_texture.blit_buffer(im_bytes, colorfmt="bgr", bufferfmt="ubyte")
