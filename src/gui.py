@@ -26,10 +26,10 @@ from kivy.uix.label import Label
 from kivy.uix.popup import Popup
 from kivy.uix.slider import Slider
 
-import player
-import recorder
-from gui_lib import StretchImage
-from const import *
+from src import player
+from src import recorder
+from src.gui_lib import StretchImage
+from src.const import *
 
 Config.set('input', 'mouse', 'mouse,multitouch_on_demand')
 Window.size = WINDOW_SIZE
@@ -661,10 +661,3 @@ class LooperApp(App):
     def cleanup(self):
         if self.screen is not None:
             self.screen.cleanup()
-
-if __name__ == '__main__':
-    app = LooperApp()
-    try:
-        app.run()
-    finally:
-        app.cleanup()

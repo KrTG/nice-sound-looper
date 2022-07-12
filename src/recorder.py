@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sounddevice as sd
 
-from const import *
+from src.const import *
 
 
 sd.default.samplerate = SR
