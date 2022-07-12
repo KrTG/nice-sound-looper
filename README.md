@@ -5,8 +5,9 @@ GUI for recording and looping sounds
 
 - Install poetry from https://python-poetry.org/
 - Run 
-        poetry install 
-        poetry shell
-        python main.py
+
+    poetry install 
+    poetry shell
+    python main.py
 
 
