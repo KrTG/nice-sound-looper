@@ -1,12 +1,4 @@
 [[package]]
-name = "altgraph"
-version = "0.17.2"
-description = "Python graph (network) package"
-category = "main"
-optional = false
-python-versions = "*"
-
-[[package]]
 name = "appdirs"
 version = "1.4.4"
 description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
@@ -188,14 +180,6 @@ type1 = ["xattr"]
 ufo = ["fs (>=2.2.0,<3)"]
 unicode = ["unicodedata2 (>=14.0.0)"]
 woff = ["zopfli (>=0.1.4)", "brotlicffi (>=0.8.0)", "brotli (>=1.0.1)"]
-
-[[package]]
-name = "future"
-version = "0.18.2"
-description = "Clean single-source support for Python 3 and 2"
-category = "main"
-optional = false
-python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
 name = "idna"
@@ -383,17 +367,6 @@ optional = false
 python-versions = ">=3.7,<3.11"
 
 [[package]]
-name = "macholib"
-version = "1.16"
-description = "Mach-O header analysis and editing"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-altgraph = ">=0.15"
-
-[[package]]
 name = "matplotlib"
 version = "3.5.2"
 description = "Python plotting package"
@@ -507,17 +480,6 @@ description = "Utility library for gitignore style pattern matching of file path
 category = "dev"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
-
-[[package]]
-name = "pefile"
-version = "2022.5.30"
-description = "Python PE parsing module"
-category = "main"
-optional = false
-python-versions = ">=3.6.0"
-
-[package.dependencies]
-future = "*"
 
 [[package]]
 name = "pexpect"
@@ -643,33 +605,6 @@ optional = false
 python-versions = ">=3.6"
 
 [[package]]
-name = "pyinstaller"
-version = "5.2"
-description = "PyInstaller bundles a Python application and all its dependencies into a single package."
-category = "main"
-optional = false
-python-versions = "<3.11,>=3.7"
-
-[package.dependencies]
-altgraph = "*"
-macholib = {version = ">=1.8", markers = "sys_platform == \"darwin\""}
-pefile = {version = ">=2022.5.30", markers = "sys_platform == \"win32\""}
-pyinstaller-hooks-contrib = ">=2021.4"
-pywin32-ctypes = {version = ">=0.2.0", markers = "sys_platform == \"win32\""}
-
-[package.extras]
-encryption = ["tinyaes (>=1.0.0)"]
-hook_testing = ["pytest (>=2.7.3)", "execnet (>=1.5.0)", "psutil"]
-
-[[package]]
-name = "pyinstaller-hooks-contrib"
-version = "2022.8"
-description = "Community maintained hooks for PyInstaller"
-category = "main"
-optional = false
-python-versions = ">=3.7"
-
-[[package]]
 name = "pyparsing"
 version = "3.0.9"
 description = "pyparsing module - Classes and methods to define and execute parsing grammars"
@@ -706,14 +641,6 @@ six = ">=1.5"
 name = "pywin32"
 version = "304"
 description = "Python for Window Extensions"
-category = "main"
-optional = false
-python-versions = "*"
-
-[[package]]
-name = "pywin32-ctypes"
-version = "0.2.0"
-description = ""
 category = "main"
 optional = false
 python-versions = "*"
@@ -948,10 +875,9 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.10"
-content-hash = "ba9070346b2181e0d70cee601702e9244a910bb06f8a675145db519b8a57bec5"
+content-hash = "77e25f04f3d013d896c507ca2b99b110958faa63eb3ae629680e599a2cf97df9"
 
 [metadata.files]
-altgraph = []
 appdirs = []
 appnope = []
 asttokens = []
@@ -972,7 +898,6 @@ docutils = []
 executing = []
 flake8 = []
 fonttools = []
-future = []
 idna = [
     {file = "idna-3.3-py3-none-any.whl", hash = "sha256:84d9dd047ffa80596e0f246e2eab0b391788b0503584e8945f2368256d2735ff"},
     {file = "idna-3.3.tar.gz", hash = "sha256:9d643ff0a55b762d5cdb124b8eaa99c66322e2157b69160bc32796e824360e6d"},
@@ -992,7 +917,6 @@ kivy-garden = []
 kiwisolver = []
 librosa = []
 llvmlite = []
-macholib = []
 matplotlib = []
 matplotlib-inline = []
 mccabe = []
@@ -1006,7 +930,6 @@ packaging = [
 ]
 parso = []
 pathspec = []
-pefile = []
 pexpect = []
 pickleshare = []
 pillow = []
@@ -1025,8 +948,6 @@ pycparser = [
 ]
 pyflakes = []
 pygments = []
-pyinstaller = []
-pyinstaller-hooks-contrib = []
 pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
     {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
@@ -1034,7 +955,6 @@ pyparsing = [
 pypiwin32 = []
 python-dateutil = []
 pywin32 = []
-pywin32-ctypes = []
 requests = []
 resampy = []
 scikit-learn = []

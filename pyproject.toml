@@ -14,7 +14,6 @@ SoundFile = "^0.10.3"
 sounddevice = "^0.4.4"
 noisereduce = "^2.0.1"
 matplotlib = "^3.5.2"
-pyinstaller = "^5.2"
 
 
 [tool.poetry.dev-dependencies]
