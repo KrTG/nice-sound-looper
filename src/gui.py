@@ -272,11 +272,11 @@ class Screen(FloatLayout):
             return DEFAULT_SILENCE_WINDOW
 
     def load_config(self):
-        with open("config.json") as config:
-            try:
+        try:
+            with open("config.json") as config:
                 self.config = json.load(config)
-            except (ValueError, OSError):
-                self.config = {}
+        except (ValueError, OSError):
+            self.config = {}
         self.config.setdefault("noise_threshold", DEFAULT_NOISE_THRESHOLD)
         self.config.setdefault("silence_threshold", DEFAULT_SILENCE_THRESHOLD)
         self.config.setdefault("silence_window", DEFAULT_SILENCE_WINDOW)
