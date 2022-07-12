@@ -124,7 +124,8 @@ class Recorder():
         if self.rec_index % HOP_LENGTH != 0:
             self.rec_index += (HOP_LENGTH - self.rec_index % HOP_LENGTH)
         track = np.copy(self.buffer[:self.rec_index])
-        track = self._noise_reduce(track, noise_threshold)
+        if noise_threshold > 0.01:
+            track = self._noise_reduce(track, noise_threshold)
         if self.reference_frame:
             track = self._quantize(track)
             track = self._attenuate_transition(track)
