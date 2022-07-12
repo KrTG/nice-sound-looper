@@ -1,7 +1,7 @@
 # nice-sound-looper
 GUI for recording and looping sounds
 
-#setup
+## setup
 
 - Install poetry from https://python-poetry.org/
 - Run 
