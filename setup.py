@@ -14,9 +14,7 @@ try:
 except OSError:
     pass
 result = subprocess.run(
-    ["poetry", "env", "list", "--full-path"],
-    stdout=subprocess.PIPE,
-    shell=True
+    ["poetry", "env", "list", "--full-path"], stdout=subprocess.PIPE, shell=True
 )
 
 env_path = result.stdout.decode().split()[0]

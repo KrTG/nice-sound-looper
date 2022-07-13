@@ -1,5 +1,4 @@
 [flake8]
 max-line-length=100
-ignore=E203, W503
-# Needs a fix
-ignore=F403, F405
+# F403, F405 need a fix
+ignore=E203, W503, F403, F405
