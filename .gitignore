@@ -168,3 +168,4 @@ config.json
 work/
 .vscode/
 *.zip
+installer_script.iss
