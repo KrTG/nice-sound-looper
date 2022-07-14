@@ -92,14 +92,14 @@ class Recorder:
         if self.state != State.STOPPED:
             raise RecorderException("Cannot record in state: {}".format(self.state))
 
-        self._reset_state()
-
         self.start_threshold = 0.02
         self.start_window = 10
         self.silence_threshold = silence_threshold
         self.silence_window = max(1, int(silence_window * SR) // BLOCKSIZE)
         self.reference_frame = reference_frame
         self.latency_adjustment = latency_adjustment
+
+        self._reset_state()
 
         self.state = State.WAITING
 
@@ -139,7 +139,7 @@ class Recorder:
         if self.rec_index % HOP_LENGTH != 0:
             self.rec_index += HOP_LENGTH - self.rec_index % HOP_LENGTH
         track = np.copy(self.buffer[: self.rec_index])
-        if noise_threshold > 0.01:
+        if noise_threshold > 0.01 and self.noise_sample is not None:
             track = self._noise_reduce(track, noise_threshold)
         if self.reference_frame:
             track = self._quantize(track)
