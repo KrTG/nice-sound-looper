@@ -115,6 +115,24 @@ optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
+name = "cx-freeze"
+version = "6.11.1"
+description = "Create standalone executables from Python scripts"
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+lief = {version = ">=0.11.5", markers = "sys_platform == \"win32\" and python_version <= \"3.10\""}
+packaging = ">=21.0"
+patchelf = {version = ">=0.12", markers = "sys_platform == \"linux\""}
+
+[package.extras]
+dev = ["bump2version (>=1.0.1)", "pre-commit (>=2.17.0)", "pylint (>=2.13.0)", "cibuildwheel (==2.6.1)"]
+doc = ["sphinx (>=5.0.1,<6.0.0)", "sphinx-rtd-theme (==1.0.0)"]
+test = ["nose (==1.3.7)", "pygments (>=2.11.2)", "pytest (>=7.0.1)", "pytest-cov (==3.0.0)", "pytest-mock (>=3.6.1)", "pytest-timeout (>=1.4.2)"]
+
+[[package]]
 name = "cycler"
 version = "0.11.0"
 description = "Composable style cycles"
@@ -359,6 +377,14 @@ docs = ["numpydoc", "sphinx (!=1.3.1)", "sphinx-rtd-theme (>=1.0.0,<2.0.0)", "nu
 tests = ["matplotlib (>=3.3.0)", "pytest-mpl", "pytest-cov", "pytest", "contextlib2", "samplerate", "soxr"]
 
 [[package]]
+name = "lief"
+version = "0.12.1"
+description = "Library to instrument executable formats"
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+
+[[package]]
 name = "llvmlite"
 version = "0.38.1"
 description = "lightweight wrapper around basic LLVM functionality"
@@ -451,6 +477,17 @@ optional = false
 python-versions = ">=3.8"
 
 [[package]]
+name = "ordered-set"
+version = "4.1.0"
+description = "An OrderedSet is a custom MutableSet that remembers its order, so that every"
+category = "dev"
+optional = false
+python-versions = ">=3.7"
+
+[package.extras]
+dev = ["pytest", "black", "mypy"]
+
+[[package]]
 name = "packaging"
 version = "21.3"
 description = "Core utilities for Python packages"
@@ -472,6 +509,17 @@ python-versions = ">=3.6"
 [package.extras]
 qa = ["flake8 (==3.8.3)", "mypy (==0.782)"]
 testing = ["docopt", "pytest (<6.0.0)"]
+
+[[package]]
+name = "patchelf"
+version = "0.14.5.0"
+description = "A small utility to modify the dynamic linker and RPATH of ELF executables."
+category = "dev"
+optional = false
+python-versions = "*"
+
+[package.extras]
+test = ["pytest", "importlib-metadata"]
 
 [[package]]
 name = "pathspec"
@@ -875,7 +923,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "3.10"
-content-hash = "77e25f04f3d013d896c507ca2b99b110958faa63eb3ae629680e599a2cf97df9"
+content-hash = "a53b45960b17d0cc9f6cdb89ef9f015392556d50f1c8101e69536c69e4b1c4fd"
 
 [metadata.files]
 appdirs = []
@@ -892,6 +940,7 @@ click = [
     {file = "click-8.1.3.tar.gz", hash = "sha256:7682dc8afb30297001674575ea00d1814d808d6a36af415a82bd481d37ba7b8e"},
 ]
 colorama = []
+cx-freeze = []
 cycler = []
 decorator = []
 docutils = []
@@ -916,6 +965,7 @@ kivy = []
 kivy-garden = []
 kiwisolver = []
 librosa = []
+lief = []
 llvmlite = []
 matplotlib = []
 matplotlib-inline = []
@@ -924,11 +974,13 @@ mypy-extensions = []
 noisereduce = []
 numba = []
 numpy = []
+ordered-set = []
 packaging = [
     {file = "packaging-21.3-py3-none-any.whl", hash = "sha256:ef103e05f519cdc783ae24ea4e2e0f508a9c99b2d4969652eed6a2e1ea5bd522"},
     {file = "packaging-21.3.tar.gz", hash = "sha256:dd47c42927d89ab911e606518907cc2d3a1f38bbd026385970643f9c5b8ecfeb"},
 ]
 parso = []
+patchelf = []
 pathspec = []
 pexpect = []
 pickleshare = []

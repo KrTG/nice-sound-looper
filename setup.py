@@ -1,26 +1,32 @@
-"""Package everything for windows"""
+from cx_Freeze import setup, Executable
 
-import os
-import shutil
-import subprocess
+include_files = [
+    (
+        "C:\\Users\\Kristoph\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\nice_sound_looper-UUVSEo-F-py3.10\\Lib\\site-packages\\_soundfile_data",
+        "lib\\_soundfile_data",
+    ),
+    (
+        "C:\\Users\\Kristoph\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\nice_sound_looper-UUVSEo-F-py3.10\\Lib\\site-packages\\kivy_deps",
+        "lib\\kivy_deps",
+    ),
+    (
+        "C:\\Users\\Kristoph\\AppData\\Local\\pypoetry\\Cache\\virtualenvs\\nice_sound_looper-UUVSEo-F-py3.10\\share",
+        "share",
+    )
+]
 
-try:
-    shutil.rmtree("build")
-except OSError as e:
-    pass
+build_exe_options = {
+    "packages": ["scipy", "kivy", "librosa", "soundfile", "sounddevice"],
+    "include_files": include_files,
+}
 
-try:
-    os.mkdir("build")
-except OSError:
-    pass
-result = subprocess.run(
-    ["poetry", "env", "list", "--full-path"], stdout=subprocess.PIPE, shell=True
+# set base="Win32GUI" to remove the console
+base = None
+
+setup(
+    name="looper",
+    version="0.1",
+    description="GUI for looping sounds.",
+    options={"build_exe": build_exe_options},
+    executables=[Executable("main.py", base=base)],
 )
-
-env_path = result.stdout.decode().split()[0]
-shutil.copytree(env_path, os.path.join("build", "env"))
-shutil.copytree("src", os.path.join("build", "src"))
-shutil.copy2("main.py", os.path.join("build", "main.py"))
-os.mkdir(os.path.join("build", "autosaves"))
-with open(os.path.join("build", "run.bat"), "w") as runfile:
-    runfile.write("env\Scripts\python.exe main.py\n")

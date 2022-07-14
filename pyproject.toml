@@ -15,13 +15,14 @@ sounddevice = "^0.4.4"
 noisereduce = "^2.0.1"
 matplotlib = "^3.5.2"
 
-
 [tool.poetry.dev-dependencies]
-black = "^22.6.0"
 isort = "^5.10.1"
 vulture = "^2.5"
 ipython = "^8.4.0"
 flake8 = "^4.0.1"
+ordered-set = "^4.1.0"
+cx-Freeze = "^6.11.1"
+black = "^22.6.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

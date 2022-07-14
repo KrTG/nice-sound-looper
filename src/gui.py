@@ -674,6 +674,8 @@ class Screen(FloatLayout):
                         pass
 
     def autosave(self, _):
+        if not os.path.isdir("autosaves"):
+            os.mkdir("autosaves")
         if len(self.player.tracks) > 0:
             autosaves = glob.glob("autosaves/autosave.[0-6].looper")
             autosaves.sort(key=lambda x: int(x.split(".")[1]), reverse=True)
